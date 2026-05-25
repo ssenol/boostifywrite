@@ -1,21 +1,39 @@
 // 01 · Login
-import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 
 import { ScreenSurface } from '@/components/Screen';
 import { LogoWordmark } from '@/components/Logo';
 import Button from '@/components/Button';
 import { IconArrow } from '@/components/Icons';
+import { useAuth } from '@/context/AuthContext';
 import { colors, fonts, radii } from '@/theme';
-import type { RootStackParamList } from '@/navigation/types';
 
 export default function Login() {
-  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { login } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading,  setLoading]  = useState(false);
+
+  const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      Alert.alert('Missing fields', 'Please enter your username and password.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await login(username.trim(), password);
+      // AuthContext user state güncellenir → navigation otomatik Main'e geçer
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not sign in. Please try again.';
+      Alert.alert('Sign in failed', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ScreenSurface style={{ backgroundColor: '#ECEDFB' }}>
-      {/* Decorative blob */}
       <View style={styles.blob}/>
 
       <View style={styles.body}>
@@ -34,28 +52,38 @@ export default function Login() {
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="Username"
             placeholderTextColor={colors.textTertiary}
             autoCapitalize="none"
-            keyboardType="email-address"
+            autoCorrect={false}
+            value={username}
+            onChangeText={setUsername}
+            editable={!loading}
           />
           <TextInput
             style={styles.input}
             placeholder="Password"
             placeholderTextColor={colors.textTertiary}
             secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            editable={!loading}
+            onSubmitEditing={handleLogin}
           />
         </View>
 
         <View style={{ marginTop: 18 }}>
-          <Button kind="primary" onPress={() => nav.navigate('Main')}
-            icon={<IconArrow size={18} color="#fff"/>}>
-            Sign in
-          </Button>
+          {loading ? (
+            <ActivityIndicator color={colors.brandBlue} style={{ height: 52 }}/>
+          ) : (
+            <Button kind="primary" onPress={handleLogin}
+              icon={<IconArrow size={18} color="#fff"/>}>
+              Sign in
+            </Button>
+          )}
         </View>
 
         <View style={{ flex: 1 }}/>
-
         <Text style={styles.version}>v2.1 · CEFR A1–C1</Text>
       </View>
     </ScreenSurface>
@@ -74,10 +102,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   heroEmph: { fontFamily: fonts.sansEb, color: colors.brandBlue, letterSpacing: -0.6 },
-  subtitle: {
-    marginTop: 14, fontFamily: fonts.sans, fontSize: 15.5, color: colors.textSecondary,
-  },
-  form: { marginTop: 40, gap: 12 },
+  subtitle: { marginTop: 14, fontFamily: fonts.sans, fontSize: 15.5, color: colors.textSecondary },
+  form:  { marginTop: 40, gap: 12 },
   input: {
     height: 52, paddingHorizontal: 18,
     backgroundColor: colors.bgCard,

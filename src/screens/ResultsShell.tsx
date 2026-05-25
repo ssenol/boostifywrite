@@ -26,12 +26,12 @@ const ROUTE_MAP: Record<ResultsTab, keyof HomeStackParamList> = {
 };
 
 export default function ResultsShell({
-  active, children, bottomOverlay, id = 1,
+  active, children, bottomOverlay, solvedTaskId = '',
 }: {
   active: ResultsTab;
   children: React.ReactNode;
   bottomOverlay?: React.ReactNode;
-  id?: number;
+  solvedTaskId?: string;
 }) {
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
   return (
@@ -46,9 +46,8 @@ export default function ResultsShell({
             <View style={styles.statusRow}>
               <View style={styles.statusDot}/>
               <Text style={[type.labelSm, { color: colors.brandGreenDeep }]}>EVALUATED</Text>
-              <Text style={[type.labelSm, { color: colors.textTertiary }]}>· APR 25</Text>
             </View>
-            <Text style={styles.title}>My Town & Neighbourhood</Text>
+            <Text style={styles.title}>Results</Text>
           </View>
           <IconButton style={{ marginTop: 4 }}>
             <IconDownload size={18} color={colors.textPrimary}/>
@@ -65,7 +64,7 @@ export default function ResultsShell({
             const isActive = t === active;
             return (
               <Pressable key={t}
-                onPress={() => nav.navigate(ROUTE_MAP[t], { id } as any)}
+                onPress={() => (nav.navigate as any)(ROUTE_MAP[t], { solvedTaskId })}
                 style={[
                   styles.pill,
                   isActive

@@ -1,7 +1,8 @@
 // 06 · Results · Overview
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ResultsShell from './ResultsShell';
@@ -11,10 +12,15 @@ import { IconArrowUp, IconChevRight } from '@/components/Icons';
 import { colors, fonts, radii, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
 
+type Nav   = NativeStackNavigationProp<HomeStackParamList>;
+type Route = RouteProp<HomeStackParamList, 'ResultsOverview'>;
+
 export default function ResultsOverview() {
-  const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const nav   = useNavigation<Nav>();
+  const route = useRoute<Route>();
+  const { solvedTaskId } = route.params;
   return (
-    <ResultsShell active="Overview">
+    <ResultsShell active="Overview" solvedTaskId={solvedTaskId}>
       {/* Overall CEFR — dark hero card */}
       <View style={styles.heroCard}>
         <View style={styles.heroBlob}/>
@@ -40,13 +46,13 @@ export default function ResultsOverview() {
         <Text style={[type.label, { marginBottom: 12 }]}>BY DIMENSION</Text>
         <View style={{ gap: 10 }}>
           <RubricBar label="Task Achievement"     score={6.5} level="B1+" color={colors.rubricTask}
-            onPress={() => nav.navigate('ResultsTask', { id: 1 })}/>
+            onPress={() => nav.navigate('ResultsTask', { solvedTaskId })}/>
           <RubricBar label="Coherence & Cohesion" score={6}   level="B1+" color={colors.rubricCohesion}
-            onPress={() => nav.navigate('ResultsCohesion', { id: 1 })}/>
+            onPress={() => nav.navigate('ResultsCohesion', { solvedTaskId })}/>
           <RubricBar label="Lexical Range"        score={5.5} level="B1"  color={colors.rubricLexical}
-            onPress={() => nav.navigate('ResultsLexical', { id: 1 })}/>
+            onPress={() => nav.navigate('ResultsLexical', { solvedTaskId })}/>
           <RubricBar label="Grammatical Accuracy" score={5}   level="B1"  color={colors.rubricGrammar}
-            onPress={() => nav.navigate('ResultsGrammar', { id: 1 })}/>
+            onPress={() => nav.navigate('ResultsGrammar', { solvedTaskId })}/>
         </View>
       </View>
 

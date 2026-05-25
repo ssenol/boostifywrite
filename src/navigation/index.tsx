@@ -2,19 +2,20 @@
 // Custom floating TabBar — React Navigation'ın default bar'ı yerine bizim
 // pill component'imizi kullanıyoruz (TabBar.tsx).
 //
-//   Root Stack:       Welcome → Level → Login → Main
-//   Main Tab:         Home / Assignments / Report / Profile
-//   Home Stack:       Assignments → Detail → Compose → Evaluating → Results*
-//   Assignments Stack: AllTasks → Detail → Compose → Evaluating → Results*
+//   Auth gating: user yoksa Login flow, varsa direkt Main
+//   Main Tab:    Home / Assignments / Report / Profile
+//   Home Stack:  Assignments → Detail → Compose → Evaluating → Results*
+//   Assignments Stack: AllTasks → same deep flow
 
 import React from 'react';
-import { View, StyleSheet, SafeAreaView } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator }   from '@react-navigation/bottom-tabs';
 
 import TabBar, { TabId } from '@/components/TabBar';
-import { colors } from '@/theme';
+import { useAuth }       from '@/context/AuthContext';
+import { colors }        from '@/theme';
 
 import OnboardingWelcome from '@/screens/OnboardingWelcome';
 import OnboardingLevel   from '@/screens/OnboardingLevel';
@@ -31,9 +32,9 @@ import ResultsCohesion   from '@/screens/ResultsCohesion';
 import ResultsLexical    from '@/screens/ResultsLexical';
 import ResultsGrammar    from '@/screens/ResultsGrammar';
 
-import AllTasks   from '@/screens/AllTasks';
-import Progress   from '@/screens/Progress';
-import Profile   from '@/screens/Profile';
+import AllTasks    from '@/screens/AllTasks';
+import Progress    from '@/screens/Progress';
+import Profile     from '@/screens/Profile';
 import ErrorScreen from '@/screens/Error';
 
 import type {
@@ -52,11 +53,11 @@ const ProfileStack     = createNativeStackNavigator<ProfileStackParamList>();
 
 const noHeader = { headerShown: false } as const;
 
-// ── Per-tab stacks ──────────────────────────────────────────
+
 function HomeNavigator() {
   return (
     <HomeStack.Navigator screenOptions={noHeader}>
-      <HomeStack.Screen name="Assignments"      component={Assignments}/>
+      <HomeStack.Screen name="Assignments" component={Assignments}/>
       <HomeStack.Screen name="AssignmentDetail" component={AssignmentDetail}/>
       <HomeStack.Screen name="Compose"          component={Compose}/>
       <HomeStack.Screen name="Evaluating"       component={Evaluating}/>
@@ -70,6 +71,7 @@ function HomeNavigator() {
     </HomeStack.Navigator>
   );
 }
+
 function AssignmentsNavigator() {
   return (
     <AssignmentsStack.Navigator screenOptions={noHeader}>
@@ -87,6 +89,7 @@ function AssignmentsNavigator() {
     </AssignmentsStack.Navigator>
   );
 }
+
 function ReportNavigator() {
   return (
     <ReportStack.Navigator screenOptions={noHeader}>
@@ -94,6 +97,7 @@ function ReportNavigator() {
     </ReportStack.Navigator>
   );
 }
+
 function ProfileNavigator() {
   return (
     <ProfileStack.Navigator screenOptions={noHeader}>
@@ -102,7 +106,6 @@ function ProfileNavigator() {
   );
 }
 
-// ── Main tab navigator with custom floating bar ─────────────
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -112,8 +115,7 @@ function MainTabs() {
           HomeStack: 'Home', AssignmentsStack: 'Assignments',
           ReportStack: 'Report', ProfileStack: 'Profile',
         };
-        const route = state.routes[state.index];
-        const active = idMap[route.name] || 'Home';
+        const active = (idMap[state.routes[state.index].name] ?? 'Home') as TabId;
         return (
           <TabBar
             active={active}
@@ -136,8 +138,17 @@ function MainTabs() {
   );
 }
 
-// ── Root: Auth + Main ───────────────────────────────────────
 export default function RootNavigator() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgApp }}>
+        <ActivityIndicator color={colors.brandBlue}/>
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer theme={{
       dark: false,
@@ -150,17 +161,22 @@ export default function RootNavigator() {
         notification: colors.brandBlue,
       },
       fonts: {
-        regular:    { fontFamily: 'Manrope_500Medium',     fontWeight: '400' },
-        medium:     { fontFamily: 'Manrope_600SemiBold',   fontWeight: '500' },
-        bold:       { fontFamily: 'Manrope_700Bold',       fontWeight: '700' },
-        heavy:      { fontFamily: 'Manrope_800ExtraBold',  fontWeight: '800' },
+        regular: { fontFamily: 'Manrope_500Medium',    fontWeight: '400' },
+        medium:  { fontFamily: 'Manrope_600SemiBold',  fontWeight: '500' },
+        bold:    { fontFamily: 'Manrope_700Bold',       fontWeight: '700' },
+        heavy:   { fontFamily: 'Manrope_800ExtraBold',  fontWeight: '800' },
       },
     }}>
       <RootStack.Navigator screenOptions={noHeader}>
-        <RootStack.Screen name="OnboardingWelcome" component={OnboardingWelcome}/>
-        <RootStack.Screen name="OnboardingLevel"   component={OnboardingLevel}/>
-        <RootStack.Screen name="Login"             component={Login}/>
-        <RootStack.Screen name="Main"              component={MainTabs}/>
+        {user ? (
+          <RootStack.Screen name="Main" component={MainTabs}/>
+        ) : (
+          <>
+            <RootStack.Screen name="OnboardingWelcome" component={OnboardingWelcome}/>
+            <RootStack.Screen name="OnboardingLevel"   component={OnboardingLevel}/>
+            <RootStack.Screen name="Login"             component={Login}/>
+          </>
+        )}
       </RootStack.Navigator>
     </NavigationContainer>
   );

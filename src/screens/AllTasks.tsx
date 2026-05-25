@@ -1,8 +1,8 @@
-// Assignments tab — tüm görevler listesi + filter bottom sheet
-import React, { useState, useMemo } from 'react';
+// Assignments tab — tüm aktif görevler + filter bottom sheet
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  View, Text, Pressable, ScrollView,
-  Modal, StyleSheet,
+  View, Text, Pressable, ScrollView, Modal, StyleSheet,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,62 +12,81 @@ import Card from '@/components/Card';
 import LevelBadge from '@/components/LevelBadge';
 import ProgressBar from '@/components/ProgressBar';
 import { IconCheck, IconFilter } from '@/components/Icons';
-import { colors, fonts, radii, spacing, type } from '@/theme';
+import { useAuth } from '@/context/AuthContext';
+import { fetchAssignedTasks } from '@/api';
+import { colors, fonts, radii, type } from '@/theme';
 import type { AssignmentsStackParamList } from '@/navigation/types';
+import type { AssignedExercise } from '@/types/api';
 
 type Nav = NativeStackNavigationProp<AssignmentsStackParamList, 'AllTasks'>;
 
-type Task = {
-  id: number; level: string; type: string; len: string; title: string;
-  due: string; dueIn: number; status: string; sub: string; progress: number;
-  accent: string;
-};
+type Filters = { level: string[]; genre: string[] };
 
-const ALL_TASKS: Task[] = [
-  { id: 1,  level: 'A2',  type: 'Essay',           len: '80–130w',  title: 'My Town & Neighbourhood',
-    due: 'Due today',       dueIn: 0,   status: 'active',      sub: 'Not started', progress: 0,   accent: colors.rubricTask },
-  { id: 2,  level: 'A2',  type: 'Informal letter', len: '60–100w',  title: 'A letter to my pen-friend about summer plans',
-    due: 'Due Fri · 3d',    dueIn: 3,   status: 'in-progress', sub: 'In progress', progress: 38,  accent: colors.rubricCohesion },
-  { id: 3,  level: 'B1',  type: 'Review',          len: '100–150w', title: 'Review of a film you liked recently',
-    due: 'Due Mon · 6d',    dueIn: 6,   status: 'active',      sub: 'Not started', progress: 0,   accent: colors.rubricLexical },
-  { id: 4,  level: 'B1',  type: 'Opinion essay',   len: '120–180w', title: 'Should social media be limited for teenagers?',
-    due: 'Due Wed · 8d',    dueIn: 8,   status: 'in-progress', sub: 'Draft saved', progress: 22,  accent: colors.rubricGrammar },
-  { id: 5,  level: 'A2',  type: 'Description',     len: '60–100w',  title: 'Describe your dream holiday',
-    due: 'Due Fri · 10d',   dueIn: 10,  status: 'active',      sub: 'Not started', progress: 0,   accent: colors.rubricTask },
-  { id: 6,  level: 'B1',  type: 'Essay',           len: '120–180w', title: 'The advantages of learning two languages',
-    due: 'Due 22 May',      dueIn: 14,  status: 'active',      sub: 'Not started', progress: 0,   accent: colors.rubricCohesion },
-  { id: 7,  level: 'A2',  type: 'Story',           len: '80–130w',  title: 'A funny thing happened to me',
-    due: 'Overdue · 2d',    dueIn: -2,  status: 'overdue',     sub: 'Not started', progress: 0,   accent: colors.danger },
-  { id: 8,  level: 'B1',  type: 'Essay',           len: '120–180w', title: 'A day in my life',
-    due: 'Returned Apr 25', dueIn: -7,  status: 'completed',   sub: '5.8/9',       progress: 100, accent: colors.brandGreen },
-  { id: 9,  level: 'A2+', type: 'Description',     len: '80–130w',  title: 'My favourite season',
-    due: 'Returned Apr 12', dueIn: -18, status: 'completed',   sub: '5.2/9',       progress: 100, accent: colors.brandGreen },
-  { id: 10, level: 'A2+', type: 'Letter',          len: '60–100w',  title: 'A letter to a friend',
-    due: 'Returned Mar 30', dueIn: -29, status: 'completed',   sub: '5.1/9',       progress: 100, accent: colors.brandGreen },
-];
-
-type Filters = { status: string[]; level: string[]; type: string[] };
-
-const DEFAULT_STATUS = ['active', 'in-progress', 'overdue'];
+function formatDue(dueDate: string): { label: string; isToday: boolean; isOverdue: boolean } {
+  const due = new Date(dueDate);
+  const now = new Date();
+  const diffDays = Math.ceil((due.getTime() - now.getTime()) / 86400000);
+  if (diffDays < 0)   return { label: `Overdue · ${Math.abs(diffDays)}d`, isToday: false, isOverdue: true };
+  if (diffDays === 0) return { label: 'Due today', isToday: true, isOverdue: false };
+  if (diffDays === 1) return { label: 'Due tomorrow', isToday: false, isOverdue: false };
+  return { label: `Due in ${diffDays}d`, isToday: false, isOverdue: false };
+}
 
 export default function AllTasks() {
-  const nav = useNavigation<Nav>();
-  const [filters, setFilters] = useState<Filters>({
-    status: DEFAULT_STATUS, level: [], type: [],
-  });
+  const nav    = useNavigation<Nav>();
+  const { user } = useAuth();
+
+  const [tasks,      setTasks]      = useState<AssignedExercise[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+  const [filters,    setFilters]    = useState<Filters>({ level: [], genre: [] });
   const [showFilter, setShowFilter] = useState(false);
 
-  const filtered = useMemo(() => ALL_TASKS.filter(t => {
-    if (filters.status.length && !filters.status.includes(t.status)) return false;
-    if (filters.level.length  && !filters.level.includes(t.level))   return false;
-    if (filters.type.length   && !filters.type.includes(t.type))     return false;
-    return true;
-  }), [filters]);
+  const load = useCallback(async (isRefresh = false) => {
+    if (!user) return;
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchAssignedTasks({
+        userId: user.userId,
+        institutionId: user.schoolId,
+        institutionSubSchoolId: user.campusId,
+        perPageCount: 50,
+      });
+      setTasks(res.data.exercises);
+    } catch {
+      setError('Could not load tasks.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [user]);
 
-  const filterCount =
-    (filters.status.length !== DEFAULT_STATUS.length ? 1 : 0) +
-    (filters.level.length  ? 1 : 0) +
-    (filters.type.length   ? 1 : 0);
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = useMemo(() => tasks.filter(t => {
+    const meta = t.assignmentMetaData.details;
+    if (filters.level.length && !filters.level.includes(meta.cefrLevel)) return false;
+    if (filters.genre.length && !filters.genre.includes(meta.writingGenre ?? '')) return false;
+    return true;
+  }), [tasks, filters]);
+
+  const filterCount = (filters.level.length ? 1 : 0) + (filters.genre.length ? 1 : 0);
+
+  // Level ve genre seçeneklerini görevlerden çıkar
+  const availableLevels = [...new Set(tasks.map(t => t.assignmentMetaData.details.cefrLevel))].sort();
+  const availableGenres = [...new Set(tasks.map(t => t.assignmentMetaData.details.writingGenre).filter(Boolean))] as string[];
+
+  if (loading) {
+    return (
+      <ScreenSurface>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.brandBlue}/>
+        </View>
+      </ScreenSurface>
+    );
+  }
 
   return (
     <ScreenSurface>
@@ -91,28 +110,37 @@ export default function AllTasks() {
         </Pressable>
       </View>
 
-      {/* Task list */}
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 110, gap: 8 }}>
-        {filtered.length === 0 ? (
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 110, gap: 8 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.brandBlue}/>
+        }
+      >
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : filtered.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No tasks match these filters.</Text>
             <Text style={styles.emptyBody}>Try removing some filters.</Text>
           </View>
         ) : (
-          filtered.map(t => (
+          filtered.map(ex => (
             <TaskRow
-              key={t.id}
-              t={t}
-              onPress={() => nav.navigate('AssignmentDetail', { id: t.id })}
+              key={ex.id}
+              exercise={ex}
+              onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}
             />
           ))
         )}
       </ScrollView>
 
-      {/* Filter modal */}
       <FilterSheet
         visible={showFilter}
         filters={filters}
+        availableLevels={availableLevels}
+        availableGenres={availableGenres}
         onApply={(f) => { setFilters(f); setShowFilter(false); }}
         onClose={() => setShowFilter(false)}
       />
@@ -120,115 +148,96 @@ export default function AllTasks() {
   );
 }
 
-// ── Task row ────────────────────────────────────────────────
-function TaskRow({ t, onPress }: { t: Task; onPress: () => void }) {
-  const dueColor =
-    t.status === 'overdue'   ? colors.danger :
-    t.status === 'completed' ? colors.brandGreenDeep :
-    t.due.startsWith('Due today') ? colors.brandBlue :
-    colors.textSecondary;
+// ── Task row ─────────────────────────────────────────────────
+function TaskRow({ exercise: ex, onPress }: { exercise: AssignedExercise; onPress: () => void }) {
+  const meta = ex.assignmentMetaData.details;
+  const due  = formatDue(ex.dueDate);
 
   return (
-    <Card accent={t.accent} padding={14} onPress={onPress}>
+    <Card accent={colors.rubricTask} padding={14} onPress={onPress}>
       <View style={{ marginLeft: 6 }}>
         <View style={styles.chipsRow}>
-          <LevelBadge level={t.level} size="sm"/>
-          <Text style={styles.chipType}>{t.type}</Text>
-          <Text style={styles.chipDot}>·</Text>
-          <Text style={styles.chipLen}>{t.len}</Text>
-          <Text style={[styles.dueText, { color: dueColor, marginLeft: 'auto' }]}>{t.due}</Text>
-        </View>
-        <Text style={styles.taskTitle}>{t.title}</Text>
-        <View style={styles.bottomRow}>
-          <Text style={[
-            styles.subText,
-            { color: t.progress > 0 && t.progress < 100 ? t.accent : colors.textTertiary },
-          ]}>{t.sub}</Text>
-          {t.progress > 0 && t.progress < 100 && (
-            <View style={{ flex: 1 }}>
-              <ProgressBar value={t.progress} color={t.accent} height={3}/>
-            </View>
+          <LevelBadge level={meta.cefrLevel} size="sm"/>
+          {meta.writingGenre && <Text style={styles.chipType}>{meta.writingGenre}</Text>}
+          {meta.minWordCount && (
+            <>
+              <Text style={styles.chipDot}>·</Text>
+              <Text style={styles.chipLen}>
+                {meta.minWordCount}{meta.maxWordCount ? `–${meta.maxWordCount}` : '+'}w
+              </Text>
+            </>
           )}
+          <Text style={[styles.dueText, {
+            marginLeft: 'auto',
+            color: due.isOverdue ? colors.danger : due.isToday ? colors.brandBlue : colors.textSecondary,
+          }]}>{due.label}</Text>
+        </View>
+        <Text style={styles.taskTitle}>{ex.name}</Text>
+        <View style={styles.bottomRow}>
+          <Text style={[styles.subText, { color: colors.textTertiary }]}>
+            {ex.remainingAttemptCount} attempt{ex.remainingAttemptCount !== 1 ? 's' : ''} left
+          </Text>
         </View>
       </View>
     </Card>
   );
 }
 
-// ── Filter bottom sheet ──────────────────────────────────────
+// ── Filter bottom sheet ─────────────────────────────────────
 function FilterSheet({
-  visible, filters, onApply, onClose,
+  visible, filters, availableLevels, availableGenres, onApply, onClose,
 }: {
-  visible: boolean;
-  filters: Filters;
-  onApply: (f: Filters) => void;
-  onClose: () => void;
+  visible: boolean; filters: Filters;
+  availableLevels: string[]; availableGenres: string[];
+  onApply: (f: Filters) => void; onClose: () => void;
 }) {
   const [local, setLocal] = useState<Filters>(filters);
-
-  // Sync local state when sheet opens
-  React.useEffect(() => { if (visible) setLocal(filters); }, [visible]);
+  useEffect(() => { if (visible) setLocal(filters); }, [visible]);
 
   const toggle = (key: keyof Filters, value: string) => {
     setLocal(f => {
-      const cur = f[key] as string[];
+      const cur = f[key];
       return { ...f, [key]: cur.includes(value) ? cur.filter(v => v !== value) : [...cur, value] };
     });
   };
-
-  const reset = () => setLocal({ status: ['active', 'in-progress', 'overdue', 'completed'], level: [], type: [] });
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={e => e.stopPropagation()}>
           <View style={styles.handle}/>
-
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>Filter tasks</Text>
-            <Pressable onPress={reset} hitSlop={8}>
+            <Pressable onPress={() => setLocal({ level: [], genre: [] })} hitSlop={8}>
               <Text style={styles.resetBtn}>Reset</Text>
             </Pressable>
           </View>
 
-          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-            {/* Status */}
-            <FilterGroup label="STATUS">
-              {([
-                ['active',      'Active'],
-                ['in-progress', 'In progress'],
-                ['overdue',     'Overdue'],
-                ['completed',   'Completed'],
-              ] as [string, string][]).map(([id, lbl]) => (
-                <FilterOption key={id} label={lbl}
-                  checked={local.status.includes(id)}
-                  onPress={() => toggle('status', id)}/>
-              ))}
-            </FilterGroup>
-
-            {/* CEFR Level */}
-            <FilterGroup label="CEFR LEVEL">
-              <View style={styles.levelPills}>
-                {['A1','A2','A2+','B1','B1+','B2','C1'].map(l => {
-                  const active = local.level.includes(l);
-                  return (
-                    <Pressable key={l} onPress={() => toggle('level', l)}
-                      style={[styles.levelPill, active && styles.levelPillActive]}>
-                      <Text style={[styles.levelPillText, active && { color: '#fff' }]}>{l}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </FilterGroup>
-
-            {/* Type */}
-            <FilterGroup label="TYPE">
-              {['Essay','Informal letter','Letter','Review','Opinion essay','Description','Story'].map(typ => (
-                <FilterOption key={typ} label={typ}
-                  checked={local.type.includes(typ)}
-                  onPress={() => toggle('type', typ)}/>
-              ))}
-            </FilterGroup>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {availableLevels.length > 0 && (
+              <FilterGroup label="CEFR LEVEL">
+                <View style={styles.levelPills}>
+                  {availableLevels.map(l => {
+                    const active = local.level.includes(l);
+                    return (
+                      <Pressable key={l} onPress={() => toggle('level', l)}
+                        style={[styles.levelPill, active && styles.levelPillActive]}>
+                        <Text style={[styles.levelPillText, active && { color: '#fff' }]}>{l}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </FilterGroup>
+            )}
+            {availableGenres.length > 0 && (
+              <FilterGroup label="TYPE">
+                {availableGenres.map(g => (
+                  <FilterOption key={g} label={g}
+                    checked={local.genre.includes(g)}
+                    onPress={() => toggle('genre', g)}/>
+                ))}
+              </FilterGroup>
+            )}
           </ScrollView>
 
           <View style={styles.sheetActions}>
@@ -280,83 +289,46 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderRadius: radii.pill,
     backgroundColor: colors.bgCard,
   },
-  filterBtnActive: { backgroundColor: colors.brandBlue, borderColor: colors.brandBlue },
-  filterBtnLabel:  { fontFamily: fonts.sansSb, fontSize: 13, color: colors.textPrimary },
-  filterBadge: {
-    minWidth: 18, height: 18, paddingHorizontal: 5,
-    backgroundColor: '#fff', borderRadius: radii.pill,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  filterBadgeText: { fontFamily: fonts.sansSb, fontSize: 11, color: colors.brandBlue },
+  filterBtnActive:   { backgroundColor: colors.brandBlue, borderColor: colors.brandBlue },
+  filterBtnLabel:    { fontFamily: fonts.sansSb, fontSize: 13, color: colors.textPrimary },
+  filterBadge:       { minWidth: 18, height: 18, paddingHorizontal: 5, backgroundColor: '#fff', borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  filterBadgeText:   { fontFamily: fonts.sansSb, fontSize: 11, color: colors.brandBlue },
 
   chipsRow: { flexDirection: 'row', alignItems: 'center', columnGap: 10, rowGap: 8, flexWrap: 'wrap' },
   chipType: { fontFamily: fonts.sans, fontSize: 14, color: colors.textSecondary },
   chipDot:  { color: colors.textTertiary },
   chipLen:  { fontFamily: fonts.mono, fontSize: 13, color: colors.textSecondary },
   dueText:  { fontFamily: fonts.monoSb, fontSize: 12, letterSpacing: 0.4 },
+  taskTitle:{ marginTop: 12, fontFamily: fonts.sansSb, fontSize: 17, letterSpacing: -0.3, lineHeight: 22, color: colors.textPrimary },
+  bottomRow:{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 14 },
+  subText:  { fontFamily: fonts.monoSb, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase' },
 
-  taskTitle: {
-    marginTop: 12, fontFamily: fonts.sansSb, fontSize: 17,
-    letterSpacing: -0.3, lineHeight: 22, color: colors.textPrimary,
-  },
-  bottomRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 14 },
-  subText:   { fontFamily: fonts.monoSb, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase' },
+  errorBox:  { backgroundColor: colors.dangerSoft, borderRadius: radii.md, padding: 14 },
+  errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.danger },
+  empty:     { alignItems: 'center', paddingVertical: 60 },
+  emptyTitle:{ fontFamily: fonts.sansSb, fontSize: 18, marginBottom: 8 },
+  emptyBody: { fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary },
 
-  empty:      { alignItems: 'center', paddingVertical: 60 },
-  emptyTitle: { fontFamily: fonts.sansSb, fontSize: 18, marginBottom: 8 },
-  emptyBody:  { fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary },
-
-  // Filter sheet
-  overlay: {
-    flex: 1, backgroundColor: 'rgba(14,17,22,0.4)', justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: colors.bgCard,
-    borderTopLeftRadius: 18, borderTopRightRadius: 18,
-    paddingHorizontal: 20, paddingBottom: 28,
-    maxHeight: '85%',
-  },
-  handle: {
-    width: 40, height: 4, borderRadius: 99,
-    backgroundColor: colors.borderStrong,
-    alignSelf: 'center', marginVertical: 12,
-  },
+  overlay: { flex: 1, backgroundColor: 'rgba(14,17,22,0.4)', justifyContent: 'flex-end' },
+  sheet:   { backgroundColor: colors.bgCard, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingHorizontal: 20, paddingBottom: 28, maxHeight: '85%' },
+  handle:  { width: 40, height: 4, borderRadius: 99, backgroundColor: colors.borderStrong, alignSelf: 'center', marginVertical: 12 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
   sheetTitle:  { fontFamily: fonts.sansSb, fontSize: 22, letterSpacing: -0.3, flex: 1 },
   resetBtn:    { fontFamily: fonts.sansSb, fontSize: 13, color: colors.textSecondary, padding: 6 },
 
-  levelPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingVertical: 6 },
-  levelPill: {
-    paddingVertical: 8, paddingHorizontal: 14,
-    borderRadius: radii.pill, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-  },
+  levelPills:    { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingVertical: 6 },
+  levelPill:     { paddingVertical: 8, paddingHorizontal: 14, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard },
   levelPillActive: { backgroundColor: colors.brandBlue, borderColor: colors.brandBlue },
-  levelPillText:   { fontFamily: fonts.mono, fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  levelPillText: { fontFamily: fonts.mono, fontSize: 13, fontWeight: '600', color: colors.textPrimary },
 
-  filterOption: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.hairline,
-  },
-  checkbox: {
-    width: 22, height: 22, borderRadius: 4,
-    borderWidth: 1.5, borderColor: colors.borderStrong,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  checkboxChecked: { backgroundColor: colors.brandBlue, borderColor: colors.brandBlue },
+  filterOption:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.hairline },
+  checkbox:          { width: 22, height: 22, borderRadius: 4, borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
+  checkboxChecked:   { backgroundColor: colors.brandBlue, borderColor: colors.brandBlue },
   filterOptionLabel: { fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', flex: 1 },
 
-  sheetActions: { flexDirection: 'row', gap: 10, marginTop: 18 },
-  cancelBtn: {
-    flex: 1, height: 50, borderRadius: radii.pill,
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  sheetActions:  { flexDirection: 'row', gap: 10, marginTop: 18 },
+  cancelBtn:     { flex: 1, height: 50, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   cancelBtnText: { fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary },
-  applyBtn: {
-    flex: 2, height: 50, borderRadius: radii.pill,
-    backgroundColor: colors.bgInverse,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  applyBtnText: { fontFamily: fonts.sansSb, fontSize: 15, color: '#fff' },
+  applyBtn:      { flex: 2, height: 50, borderRadius: radii.pill, backgroundColor: colors.bgInverse, alignItems: 'center', justifyContent: 'center' },
+  applyBtnText:  { fontFamily: fonts.sansSb, fontSize: 15, color: '#fff' },
 });

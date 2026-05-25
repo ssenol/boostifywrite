@@ -51,10 +51,11 @@ export const colors = {
   hairline:      '#EAECF4',
 
   // ── State ──
-  success: '#16A34A',
-  warning: '#C99016',
-  danger:  '#DC2626',
-  info:    '#1F94DC',
+  success:    '#16A34A',
+  warning:    '#C99016',
+  danger:     '#DC2626',
+  dangerSoft: '#FEE2E2',
+  info:       '#1F94DC',
 } as const;
 
 // ── Spacing (4-pt grid) ──

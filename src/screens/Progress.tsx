@@ -1,14 +1,18 @@
-// Progress — CEFR trajectory chart + ladder + recent essays.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+// Progress — gerçek tamamlanan raporlar + statik CEFR chart
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
 
 import { ScreenSurface, ScreenScroll } from '@/components/Screen';
 import Card from '@/components/Card';
 import SectionHeader from '@/components/SectionHeader';
 import { IconArrowUp } from '@/components/Icons';
+import { useAuth } from '@/context/AuthContext';
+import { fetchCompletedReports } from '@/api';
 import { colors, fonts, radii, type } from '@/theme';
+import type { CompletedExercise } from '@/types/api';
 
+// Statik grafik noktaları — gerçek CEFR zaman serisi API'den gelmiyor
 const POINTS = [
   { m: 'NOV', s: 4.2 },
   { m: 'DEC', s: 4.6 },
@@ -17,24 +21,54 @@ const POINTS = [
   { m: 'MAR', s: 5.6 },
   { m: 'APR', s: 5.8 },
 ];
-const RECENT = [
-  { title: 'My Town & Neighbourhood',     when: 'Apr 25', level: 'B1+', score: '5.8/9', accent: colors.rubricTask },
-  { title: 'A day in my life',            when: 'Apr 25', level: 'B1',  score: '5.8/9', accent: colors.brandGreen },
-  { title: 'My favourite season',         when: 'Apr 12', level: 'A2+', score: '5.2/9', accent: colors.rubricTask },
-  { title: 'A letter to a friend',        when: 'Mar 30', level: 'A2+', score: '5.1/9', accent: colors.rubricCohesion },
-];
 
 const xy = (i: number, s: number, w: number) => ({
   x: (i / (POINTS.length - 1)) * w,
   y: 95 - ((s - 3) / 5) * 80,
 });
-const linePath = (w: number) => POINTS.map((p, i) => {
-  const { x, y } = xy(i, p.s, w);
-  return `${i === 0 ? 'M' : 'L'}${x},${y}`;
-}).join(' ');
+const linePath = (w: number) =>
+  POINTS.map((p, i) => `${i === 0 ? 'M' : 'L'}${xy(i, p.s, w).x},${xy(i, p.s, w).y}`).join(' ');
 const areaPath = (w: number) => `${linePath(w)} L${w},110 L0,110 Z`;
 
+const ACCENT_COLORS = [
+  colors.rubricTask, colors.rubricCohesion, colors.rubricLexical, colors.rubricGrammar,
+];
+
 export default function Progress() {
+  const { user } = useAuth();
+
+  const [exercises,  setExercises]  = useState<CompletedExercise[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+
+  const load = useCallback(async (isRefresh = false) => {
+    if (!user) return;
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchCompletedReports({ userId: user.userId, perPageCount: 20 });
+      setExercises(res.data.exercises);
+    } catch {
+      setError('Could not load reports.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [user]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) {
+    return (
+      <ScreenSurface>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.brandBlue}/>
+        </View>
+      </ScreenSurface>
+    );
+  }
+
   return (
     <ScreenSurface>
       <View style={styles.header}>
@@ -42,7 +76,16 @@ export default function Progress() {
         <Text style={styles.title}>Progress</Text>
       </View>
 
-      <ScreenScroll contentStyle={{ padding: 20, paddingBottom: 110 }}>
+      <ScreenScroll
+        contentStyle={{ padding: 20, paddingBottom: 110 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); load(true); }}
+            tintColor={colors.brandBlue}
+          />
+        }
+      >
         {/* Hero level chart */}
         <Card padding={18}>
           <View style={styles.chartHeader}>
@@ -59,7 +102,6 @@ export default function Progress() {
             </View>
           </View>
 
-          {/* Line chart */}
           <View style={{ marginTop: 22, height: 110 }}>
             <Svg width="100%" height={110} viewBox="0 0 320 110">
               {[0, 1, 2, 3].map(i => (
@@ -87,13 +129,13 @@ export default function Progress() {
           </View>
         </Card>
 
-        {/* CEFR ladder */}
+        {/* CEFR merdiveni */}
         <View style={{ marginTop: 14 }}>
           <SectionHeader label="CEFR LADDER"/>
           <View style={styles.ladder}>
-            {['A1','A2','B1','B2','C1','C2'].map(l => {
+            {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map(l => {
               const isCurrent = l === 'B1';
-              const isPast = ['A1', 'A2'].includes(l);
+              const isPast    = ['A1', 'A2'].includes(l);
               return (
                 <View key={l} style={[
                   styles.ladderCell,
@@ -112,25 +154,44 @@ export default function Progress() {
           <Text style={styles.next}>NEXT: B2 — STRENGTHEN GRAMMAR & LEXIS</Text>
         </View>
 
-        {/* Recent essays */}
+        {/* Son yazılar */}
         <View style={{ marginTop: 22 }}>
-          <SectionHeader label="RECENT ESSAYS" right="VIEW ALL"/>
-          <View style={{ gap: 8 }}>
-            {RECENT.map((e, i) => (
-              <Card key={i} accent={e.accent} padding={14}>
-                <View style={[styles.recentRow, { marginLeft: 6 }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.recentTitle}>{e.title}</Text>
-                    <Text style={styles.recentWhen}>RETURNED {e.when.toUpperCase()}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.recentLevel}>{e.level}</Text>
-                    <Text style={styles.recentScore}>{e.score}</Text>
-                  </View>
-                </View>
-              </Card>
-            ))}
-          </View>
+          <SectionHeader label={`RECENT ESSAYS · ${exercises.length}`}/>
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : exercises.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>No completed essays yet.</Text>
+            </View>
+          ) : (
+            <View style={{ gap: 8 }}>
+              {exercises.map((e, i) => {
+                const best = e.attempts.reduce<number>((max, a) => Math.max(max, a.mainScore), 0);
+                return (
+                  <Card key={e.assignedTaskId} accent={ACCENT_COLORS[i % ACCENT_COLORS.length]} padding={14}>
+                    <View style={[styles.recentRow, { marginLeft: 6 }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.recentTitle}>{e.taskName}</Text>
+                        <Text style={styles.recentWhen}>
+                          RETURNED {new Date(e.lastSolvedDate).toLocaleDateString('en-US', {
+                            month: 'short', day: 'numeric',
+                          }).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={styles.recentScore}>{best}/100</Text>
+                        <Text style={styles.recentAttempts}>
+                          {e.totalAttempts} attempt{e.totalAttempts !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                    </View>
+                  </Card>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScreenScroll>
     </ScreenSurface>
@@ -146,13 +207,13 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.sansSb, fontSize: 26, letterSpacing: -0.5, color: colors.textPrimary },
 
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  levelBig:   { fontFamily: fonts.sansEb, fontSize: 36, color: colors.brandBlue },
-  levelScore: { fontFamily: fonts.mono, fontSize: 14, color: colors.textTertiary },
+  levelBig:    { fontFamily: fonts.sansEb, fontSize: 36, color: colors.brandBlue },
+  levelScore:  { fontFamily: fonts.mono, fontSize: 14, color: colors.textTertiary },
 
   deltaPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 10, paddingVertical: 4,
-    backgroundColor: colors.brandGreenSoft, borderRadius: 9999,
+    backgroundColor: colors.brandGreenSoft, borderRadius: radii.pill,
   },
   deltaText: { fontFamily: fonts.sansSb, fontSize: 12, color: colors.brandGreenDeep },
 
@@ -172,9 +233,14 @@ const styles = StyleSheet.create({
   ladderText: { fontFamily: fonts.sansEb, fontSize: 15, color: colors.textTertiary },
   next: { fontFamily: fonts.mono, fontSize: 11, color: colors.textTertiary, marginTop: 8, letterSpacing: 0.6 },
 
-  recentRow: { flexDirection: 'row', alignItems: 'center' },
-  recentTitle: { fontFamily: fonts.sansSb, fontSize: 16, color: colors.textPrimary, letterSpacing: -0.2, lineHeight: 20 },
-  recentWhen:  { fontFamily: fonts.mono, fontSize: 11, color: colors.textTertiary, marginTop: 3 },
-  recentLevel: { fontFamily: fonts.sansEb, fontSize: 16, color: colors.textPrimary },
-  recentScore: { fontFamily: fonts.mono, fontSize: 11, color: colors.textTertiary },
+  recentRow:      { flexDirection: 'row', alignItems: 'center' },
+  recentTitle:    { fontFamily: fonts.sansSb, fontSize: 16, color: colors.textPrimary, letterSpacing: -0.2, lineHeight: 20 },
+  recentWhen:     { fontFamily: fonts.mono, fontSize: 11, color: colors.textTertiary, marginTop: 3 },
+  recentScore:    { fontFamily: fonts.sansEb, fontSize: 16, color: colors.textPrimary },
+  recentAttempts: { fontFamily: fonts.mono, fontSize: 11, color: colors.textTertiary },
+
+  errorBox:  { backgroundColor: colors.dangerSoft, borderRadius: radii.md, padding: 14 },
+  errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.danger },
+  empty:     { alignItems: 'center', paddingVertical: 40 },
+  emptyText: { fontFamily: fonts.sans, fontSize: 16, color: colors.textTertiary },
 });

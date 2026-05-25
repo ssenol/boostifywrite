@@ -16,6 +16,7 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 
 import RootNavigator from '@/navigation';
+import { AuthProvider } from '@/context/AuthContext';
 import { colors } from '@/theme';
 
 export default function App() {
@@ -33,7 +34,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark"/>
-      <RootNavigator/>
+      <AuthProvider>
+        <RootNavigator/>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
