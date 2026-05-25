@@ -1,6 +1,7 @@
 // 04 · Compose — yazma yüzeyi, gerçek API ile
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, TextInput, ScrollView, Keyboard, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +11,7 @@ import IconButton from '@/components/IconButton';
 import ProgressBar from '@/components/ProgressBar';
 import { IconChevLeft, IconCheck, IconArrow } from '@/components/Icons';
 import { fetchTaskContent, submitWriting } from '@/api';
+import HtmlText from '@/components/HtmlText';
 import { colors, fonts, radii, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
 import type { ExerciseQuestion } from '@/types/api';
@@ -22,13 +24,37 @@ function countWords(text: string): number {
 }
 
 export default function Compose() {
-  const nav   = useNavigation<Nav>();
-  const route = useRoute<Route>();
+  const nav    = useNavigation<Nav>();
+  const route  = useRoute<Route>();
+  const insets = useSafeAreaInsets();
   const { exercise: ex, exerciseToken } = route.params;
   const meta = ex.assignmentMetaData.details;
 
-  const [tab,        setTab]        = useState<'Prompt' | 'Outline' | 'Vocab'>('Outline');
-  const [expanded,   setExpanded]   = useState(true);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const [tab,            setTab]            = useState<'Prompt' | 'Outline' | 'Vocab'>('Outline');
+  const [expanded,       setExpanded]       = useState(true);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Klavye açılınca peek kapat, kapanınca sıfırla
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', e => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setExpanded(false);
+    });
+    const hide = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
+  // peek sheet güncel yüksekliği (maxHeight değerleri)
+  const peekHeight = expanded ? 320 : 95;
+  // Klavye açıkken safe area gerek yok (klavye kaplar), kapalıyken home indicator için ekle
+  const barPaddingBottom = keyboardHeight > 0 ? 12 : Math.max(20, insets.bottom + 10);
+  const barHeight        = 12 + 48 + barPaddingBottom;
+  // Tüm alt öğeler klavye yüksekliği kadar yukarı kayar
+  const barBottom        = keyboardHeight;
   const [text,       setText]       = useState('');
   const [done,       setDone]       = useState<string[]>([]);
   const [question,   setQuestion]   = useState<ExerciseQuestion | null>(null);
@@ -96,7 +122,7 @@ export default function Compose() {
     : [];
 
   return (
-    <ScreenSurface>
+    <ScreenSurface edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <IconButton onPress={() => nav.goBack()}>
@@ -115,10 +141,18 @@ export default function Compose() {
         )}
       </View>
 
-      {/* Yazı alanı */}
-      <View style={{ flex: 1, paddingHorizontal: 22, paddingTop: 20 }}>
+      {/* Yazı alanı — peek + bar kadar marginBottom, içerik büyüdükçe otomatik scroll */}
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1, marginBottom: barBottom + barHeight + peekHeight }}
+        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 20, paddingBottom: 16 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+      >
         <TextInput
           multiline
+          scrollEnabled={false}
           style={styles.bodyText}
           textAlignVertical="top"
           placeholder="Start writing here…"
@@ -127,10 +161,10 @@ export default function Compose() {
           onChangeText={setText}
           editable={!submitting}
         />
-      </View>
+      </ScrollView>
 
       {/* Peek sheet */}
-      <View style={[styles.peek, expanded ? styles.peekExpanded : styles.peekCollapsed]}>
+      <View style={[styles.peek, expanded ? styles.peekExpanded : styles.peekCollapsed, { bottom: barBottom + barHeight }]}>
         <Pressable onPress={() => setExpanded(e => !e)} style={styles.peekHandle}/>
 
         <View style={styles.peekTabs}>
@@ -161,7 +195,7 @@ export default function Compose() {
         {expanded && (
           <View style={{ marginTop: 14 }}>
             {tab === 'Outline' && (
-              <View style={{ gap: 6 }}>
+              <View style={{ gap: 6, paddingBottom: 12 }}>
                 {outlines.length === 0 ? (
                   <Text style={styles.emptyHint}>No structure guide for this assignment.</Text>
                 ) : outlines.map((o, i) => {
@@ -187,14 +221,15 @@ export default function Compose() {
             {tab === 'Prompt' && (
               loadingQ
                 ? <ActivityIndicator color={colors.brandBlue}/>
-                : <Text style={styles.promptText}>
-                    {question?.question.questionContent ?? ex.name}
-                  </Text>
+                : <HtmlText
+                    html={question?.question.questionContent ?? ex.name}
+                    style={styles.promptText}
+                  />
             )}
             {tab === 'Vocab' && (
               keywords.length === 0
                 ? <Text style={styles.emptyHint}>No vocabulary hints for this assignment.</Text>
-                : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 12 }}>
                     {keywords.map(k => (
                       <View key={k} style={styles.vocabChip}>
                         <Text style={styles.vocabText}>{k}</Text>
@@ -207,7 +242,7 @@ export default function Compose() {
       </View>
 
       {/* Alt çubuk: kelime sayısı + gönder */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { bottom: barBottom, paddingBottom: barPaddingBottom }]}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
             <Text style={[
@@ -262,12 +297,12 @@ const styles = StyleSheet.create({
   timerText: { fontFamily: fonts.monoSb, fontSize: 14, color: colors.brandBlue, letterSpacing: 0.4 },
 
   bodyText: {
-    flex: 1,
     fontFamily: fonts.sans, fontSize: 17, lineHeight: 29, color: colors.textPrimary,
+    minHeight: 200,
   },
 
   peek: {
-    position: 'absolute', left: 0, right: 0, bottom: 70,
+    position: 'absolute', left: 0, right: 0,
     backgroundColor: colors.bgCard,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
     paddingHorizontal: 16, paddingBottom: 14, paddingTop: 8,
@@ -275,7 +310,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -8 }, elevation: 8,
   },
   peekExpanded:  { maxHeight: 320 },
-  peekCollapsed: { maxHeight: 60, overflow: 'hidden' },
+  peekCollapsed: { maxHeight: 95, overflow: 'hidden' },
   peekHandle: {
     alignSelf: 'center', width: 40, height: 4, borderRadius: 99,
     backgroundColor: colors.borderStrong, marginBottom: 12, marginTop: 4,
@@ -295,22 +330,22 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.borderStrong,
     alignItems: 'center', justifyContent: 'center',
   },
-  outlineLabel: { flex: 1, fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary },
+  outlineLabel: { flex: 1, fontFamily: fonts.sansSb, fontSize: 13, color: colors.textPrimary },
 
-  promptText: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 22, color: colors.textSecondary },
+  promptText: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.textSecondary },
   emptyHint:  { fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary },
 
   vocabChip: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill,
-    backgroundColor: colors.bgCardTint, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.brandBlueSoft,
   },
-  vocabText: { fontFamily: fonts.sans, fontSize: 13, color: colors.textPrimary },
+  vocabText: { fontFamily: fonts.sansSb, fontSize: 13, color: colors.brandBlue },
 
   bottomBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    paddingHorizontal: 16, paddingBottom: 20, paddingTop: 12,
-    backgroundColor: colors.bgApp,
+    paddingHorizontal: 16, paddingTop: 12,
     borderTopWidth: 1, borderTopColor: colors.hairline,
+    backgroundColor: colors.bgApp,
     flexDirection: 'row', alignItems: 'center', gap: 14,
   },
   wordCount:  { fontFamily: fonts.sansEb, fontSize: 16 },

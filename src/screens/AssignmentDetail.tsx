@@ -1,6 +1,7 @@
 // 03 · Assignment Detail — gerçek exercise parametresiyle çalışır
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -44,6 +45,7 @@ export default function AssignmentDetail() {
   const meta = ex.assignmentMetaData.details;
   const due  = dueBadge(ex.dueDate);
 
+  const insets = useSafeAreaInsets();
   const [starting, setStarting] = useState(false);
 
   const handleStart = async () => {
@@ -65,7 +67,7 @@ export default function AssignmentDetail() {
     : [];
 
   return (
-    <ScreenSurface>
+    <ScreenSurface edges={['top']}>
       <View style={styles.header}>
         <IconButton onPress={() => nav.goBack()}>
           <IconChevLeft size={18} color={colors.textPrimary}/>
@@ -74,7 +76,7 @@ export default function AssignmentDetail() {
         <View style={{ width: 40 }}/>
       </View>
 
-      <ScreenScroll contentStyle={{ paddingBottom: 120 }}>
+      <ScreenScroll contentStyle={{ paddingBottom: Math.max(100, insets.bottom + 90) }}>
         <View style={{ padding: 20 }}>
           <View style={styles.metaRow}>
             <LevelBadge level={meta.cefrLevel} size="sm"/>
@@ -150,7 +152,7 @@ export default function AssignmentDetail() {
         </View>
       </ScreenScroll>
 
-      <View style={styles.stickyCta}>
+      <View style={[styles.stickyCta, { paddingBottom: Math.max(24, insets.bottom + 12) }]}>
         {starting ? (
           <ActivityIndicator color={colors.brandBlue} style={{ height: 50 }}/>
         ) : (
@@ -219,8 +221,10 @@ const styles = StyleSheet.create({
 
   stickyCta: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    paddingHorizontal: 20, paddingBottom: 22, paddingTop: 14,
-    backgroundColor: colors.bgApp,
+    backgroundColor: colors.bgCard,
     borderTopWidth: 1, borderTopColor: colors.hairline,
+    shadowColor: '#0E1116', shadowOpacity: 0.06, shadowRadius: 6,
+    shadowOffset: { width: 0, height: -3 }, elevation: 4,
+    paddingHorizontal: 28, paddingTop: 14, paddingBottom: 24,
   },
 });

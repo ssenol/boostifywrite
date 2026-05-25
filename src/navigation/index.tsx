@@ -111,6 +111,13 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={noHeader}
       tabBar={({ state, navigation }) => {
+        // Herhangi bir stack'te root dışında bir ekran açıksa tab bar'ı gizle
+        const isDeep = state.routes.some(route => {
+          const nested = (route as any).state;
+          return nested && typeof nested.index === 'number' && nested.index > 0;
+        });
+        if (isDeep) return null;
+
         const idMap: Record<string, TabId> = {
           HomeStack: 'Home', AssignmentsStack: 'Assignments',
           ReportStack: 'Report', ProfileStack: 'Profile',

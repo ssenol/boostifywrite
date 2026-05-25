@@ -6,9 +6,9 @@ import { TabIcon } from './Icons';
 
 export type TabId = 'Home' | 'Assignments' | 'Report' | 'Profile';
 
-const TABS: Array<{ id: TabId; color: string }> = [
+const TABS: Array<{ id: TabId; label?: string; color: string }> = [
   { id: 'Home',        color: colors.brandBlue },
-  { id: 'Assignments', color: colors.brandGreen },
+  { id: 'Assignments', label: 'Tasks', color: colors.brandGreen },
   { id: 'Report',      color: colors.rubricTask },
   { id: 'Profile',     color: colors.textPrimary },
 ];
@@ -18,7 +18,7 @@ export default function TabBar({
 }: { active: TabId; onChange: (t: TabId) => void }) {
   return (
     <View style={[styles.bar, shadow.lg]}>
-      {TABS.map(({ id, color }) => {
+      {TABS.map(({ id, label, color }) => {
         const isActive = id === active;
         const Icon = TabIcon[id];
         return (
@@ -31,7 +31,7 @@ export default function TabBar({
             ]}
           >
             <Icon size={20} color={isActive ? '#fff' : colors.textSecondary} filled={isActive}/>
-            {isActive ? <Text style={styles.label}>{id}</Text> : null}
+            {isActive ? <Text style={styles.label}>{label ?? id}</Text> : null}
           </Pressable>
         );
       })}
