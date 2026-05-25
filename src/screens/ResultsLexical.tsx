@@ -1,6 +1,10 @@
 import React from 'react';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import DimensionScreen from './DimensionScreen';
-import { D_LEXICAL } from './dimensionData';
+import type { HomeStackParamList } from '@/navigation/types';
+
 export default function ResultsLexical() {
-  return <DimensionScreen tab="Vocab" dimension={D_LEXICAL}/>;
+  const { solvedTaskId } = useRoute<RouteProp<HomeStackParamList, 'ResultsLexical'>>().params;
+  return <DimensionScreen tab="Vocab" solvedTaskId={solvedTaskId}/>;
 }

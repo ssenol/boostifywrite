@@ -1,6 +1,10 @@
 import React from 'react';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import DimensionScreen from './DimensionScreen';
-import { D_TASK } from './dimensionData';
+import type { HomeStackParamList } from '@/navigation/types';
+
 export default function ResultsTask() {
-  return <DimensionScreen tab="Task" dimension={D_TASK}/>;
+  const { solvedTaskId } = useRoute<RouteProp<HomeStackParamList, 'ResultsTask'>>().params;
+  return <DimensionScreen tab="Task" solvedTaskId={solvedTaskId}/>;
 }

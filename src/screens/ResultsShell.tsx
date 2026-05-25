@@ -1,15 +1,12 @@
-// Shared shell for all six rubric/results screens.
-// Top header (evaluated badge + title + download), tab pills row, body
-// scroll area, optional bottom-anchored overlay (peek sheet).
-
 import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ScreenSurface } from '@/components/Screen';
 import IconButton from '@/components/IconButton';
 import { IconChevLeft, IconDownload } from '@/components/Icons';
+import { ReportProvider, useReport } from '@/context/ReportContext';
 import { colors, fonts, radii, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
 
@@ -25,15 +22,25 @@ const ROUTE_MAP: Record<ResultsTab, keyof HomeStackParamList> = {
   Grammar:  'ResultsGrammar',
 };
 
-export default function ResultsShell({
-  active, children, bottomOverlay, solvedTaskId = '',
-}: {
+type ShellProps = {
   active: ResultsTab;
   children: React.ReactNode;
   bottomOverlay?: React.ReactNode;
   solvedTaskId?: string;
-}) {
+};
+
+export default function ResultsShell(props: ShellProps) {
+  return (
+    <ReportProvider solvedTaskId={props.solvedTaskId ?? ''}>
+      <ShellInner {...props}/>
+    </ReportProvider>
+  );
+}
+
+function ShellInner({ active, children, bottomOverlay, solvedTaskId = '' }: ShellProps) {
   const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+  const { loading, error } = useReport();
+
   return (
     <ScreenSurface>
       {/* Header */}
@@ -80,15 +87,26 @@ export default function ResultsShell({
       </View>
 
       {/* Body */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
+      {loading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.brandBlue}/>
+        </View>
+      ) : error ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <Text style={{ fontFamily: fonts.sans, fontSize: 15, color: colors.textSecondary, textAlign: 'center' }}>
+            Could not load results. Please check your connection.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {children}
+        </ScrollView>
+      )}
 
-      {/* Optional bottom-anchored overlay (e.g. annotation peek on Writing) */}
       {bottomOverlay && (
         <View pointerEvents="box-none" style={styles.overlayWrap}>
           {bottomOverlay}
@@ -115,7 +133,5 @@ const styles = StyleSheet.create({
   },
   pillText: { fontFamily: fonts.sansSb, fontSize: 14 },
 
-  overlayWrap: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-  },
+  overlayWrap: { position: 'absolute', left: 0, right: 0, bottom: 0 },
 });

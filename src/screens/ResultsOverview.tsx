@@ -1,4 +1,3 @@
-// 06 · Results · Overview
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -9,35 +8,70 @@ import ResultsShell from './ResultsShell';
 import Card from '@/components/Card';
 import RubricBar from '@/components/RubricBar';
 import { IconArrowUp, IconChevRight } from '@/components/Icons';
+import { useReport, findScore, scoreToCefr, getCriteriaEntry, isInlineCorrection } from '@/context/ReportContext';
 import { colors, fonts, radii, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
 
 type Nav   = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'ResultsOverview'>;
 
+const DIM_CONFIG = [
+  { label: 'Task Achievement',     kw: 'task',  color: colors.rubricTask,     route: 'ResultsTask'     },
+  { label: 'Coherence & Cohesion', kw: 'coher', color: colors.rubricCohesion, route: 'ResultsCohesion' },
+  { label: 'Lexical Range',        kw: 'lexic', color: colors.rubricLexical,  route: 'ResultsLexical'  },
+  { label: 'Grammatical Accuracy', kw: 'gramm', color: colors.rubricGrammar,  route: 'ResultsGrammar'  },
+] as const;
+
 export default function ResultsOverview() {
   const nav   = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { solvedTaskId } = route.params;
+  const { report } = useReport();
+
+  if (!report) return (
+    <ResultsShell active="Overview" solvedTaskId={solvedTaskId}>
+      {null}
+    </ResultsShell>
+  );
+
+  const scores = report.criteriaScores ?? {};
+
+  // En düşük skorlu boyut → "biggest lever"
+  const lever = DIM_CONFIG
+    .map(d => ({ ...d, score: findScore(scores, d.kw) }))
+    .sort((a, b) => a.score - b.score)[0];
+
+  // TOP 3 ACTIONS: her boyutun ilk issue'su, en düşük skordan başla
+  type Action = { color: string; text: string };
+  const actions: Action[] = [];
+  for (const d of [...DIM_CONFIG].sort((a, b) => findScore(scores, a.kw) - findScore(scores, b.kw))) {
+    if (actions.length >= 3) break;
+    const cr = getCriteriaEntry(report.result, d.kw);
+    const firstIssue = (cr?.issues ?? [])[0];
+    if (!firstIssue) continue;
+    const text = isInlineCorrection(firstIssue)
+      ? firstIssue.detailFeedbackWithReason || `${firstIssue.wrongWord} → ${firstIssue.correctWord}`
+      : firstIssue;
+    actions.push({ color: d.color, text });
+  }
+
   return (
     <ResultsShell active="Overview" solvedTaskId={solvedTaskId}>
-      {/* Overall CEFR — dark hero card */}
+      {/* Overall CEFR */}
       <View style={styles.heroCard}>
         <View style={styles.heroBlob}/>
         <View>
           <Text style={[type.label, { color: colors.textInverseSoft, marginBottom: 6 }]}>OVERALL CEFR</Text>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12 }}>
-            <Text style={styles.heroBig}>B1+</Text>
-            <Text style={styles.heroScore}>5.8/9</Text>
+            <Text style={styles.heroBig}>{report.cefrLevel}</Text>
+            <Text style={styles.heroScore}>{report.mainScore.toFixed(1)}/9</Text>
           </View>
-          <Text style={styles.heroSub}>
-            Strong B1 — next level{' '}
-            <Text style={{ fontFamily: fonts.sansEb }}>B2</Text>
-          </Text>
-          <View style={styles.insight}>
-            <IconArrowUp size={13} color="#fff"/>
-            <Text style={styles.insightText}>Grammar accuracy is your biggest lever</Text>
-          </View>
+          {lever && (
+            <View style={styles.insight}>
+              <IconArrowUp size={13} color="#fff"/>
+              <Text style={styles.insightText}>{lever.label} is your biggest lever</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -45,34 +79,33 @@ export default function ResultsOverview() {
       <View style={{ marginTop: 22 }}>
         <Text style={[type.label, { marginBottom: 12 }]}>BY DIMENSION</Text>
         <View style={{ gap: 10 }}>
-          <RubricBar label="Task Achievement"     score={6.5} level="B1+" color={colors.rubricTask}
-            onPress={() => nav.navigate('ResultsTask', { solvedTaskId })}/>
-          <RubricBar label="Coherence & Cohesion" score={6}   level="B1+" color={colors.rubricCohesion}
-            onPress={() => nav.navigate('ResultsCohesion', { solvedTaskId })}/>
-          <RubricBar label="Lexical Range"        score={5.5} level="B1"  color={colors.rubricLexical}
-            onPress={() => nav.navigate('ResultsLexical', { solvedTaskId })}/>
-          <RubricBar label="Grammatical Accuracy" score={5}   level="B1"  color={colors.rubricGrammar}
-            onPress={() => nav.navigate('ResultsGrammar', { solvedTaskId })}/>
+          {DIM_CONFIG.map(d => {
+            const score = findScore(scores, d.kw);
+            return (
+              <RubricBar
+                key={d.kw}
+                label={d.label}
+                score={score}
+                level={scoreToCefr(score)}
+                color={d.color}
+                onPress={() => (nav.navigate as any)(d.route, { solvedTaskId })}
+              />
+            );
+          })}
         </View>
       </View>
 
       {/* Top 3 actions */}
-      <View style={{ marginTop: 22 }}>
-        <Text style={[type.label, { marginBottom: 10 }]}>TOP 3 ACTIONS</Text>
-        <View style={{ gap: 8 }}>
-          <ActionRow n={1} color={colors.rubricGrammar}  text="Fix the 7 grammar errors"/>
-          <ActionRow n={2} color={colors.rubricCohesion} text="Replace basic linkers"/>
-          <ActionRow n={3} color={colors.rubricTask}     text="Strengthen opinion in conclusion"/>
+      {actions.length > 0 && (
+        <View style={{ marginTop: 22 }}>
+          <Text style={[type.label, { marginBottom: 10 }]}>TOP 3 ACTIONS</Text>
+          <View style={{ gap: 8 }}>
+            {actions.map((a, i) => (
+              <ActionRow key={i} n={i + 1} color={a.color} text={a.text}/>
+            ))}
+          </View>
         </View>
-      </View>
-
-      {/* Teacher note */}
-      <View style={styles.teacherNote}>
-        <Text style={[type.label, { marginBottom: 8 }]}>TEACHER NOTE</Text>
-        <Text style={styles.teacherText}>
-          "Nice progress on structure, Elif. Focus on linkers and a clearer stance this week and you'll see a B2."
-        </Text>
-      </View>
+      )}
     </ResultsShell>
   );
 }
@@ -101,7 +134,6 @@ const styles = StyleSheet.create({
   },
   heroBig:   { fontFamily: fonts.sansEb, fontSize: 52, color: '#fff', letterSpacing: -1, lineHeight: 52 },
   heroScore: { fontFamily: fonts.sansSb, fontSize: 16, color: colors.textInverseSoft },
-  heroSub:   { fontFamily: fonts.sans, fontSize: 14, color: '#fff', marginTop: 12 },
   insight: {
     marginTop: 14, alignSelf: 'flex-start',
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -111,17 +143,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
   insightText: { fontFamily: fonts.sansSb, fontSize: 13, color: '#fff' },
-
   actionNum: {
     width: 22, height: 22, borderRadius: radii.sm,
     fontFamily: fonts.sansEb, fontSize: 13, color: colors.textSecondary,
     textAlign: 'center', lineHeight: 22,
   },
   actionText: { flex: 1, fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary },
-
-  teacherNote: {
-    marginTop: 22, backgroundColor: colors.brandCream,
-    borderRadius: radii.lg, padding: 16,
-  },
-  teacherText: { fontFamily: fonts.sansEb, fontSize: 15, lineHeight: 22, color: colors.textPrimary, letterSpacing: -0.3 },
 });

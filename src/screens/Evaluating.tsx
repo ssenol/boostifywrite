@@ -37,15 +37,44 @@ export default function Evaluating() {
     hour: 'numeric', minute: '2-digit',
   });
 
-  // Sahte ilerleme — 90s'da %90'a kadar ulaşır, son %10'u API bekler
+  // // Sahte ilerleme — 90s'da %90'a kadar ulaşır, son %10'u API bekler
+  // useEffect(() => {
+  //   const start = Date.now();
+  //   const t = setInterval(() => {
+  //     if (finishedRef.current) return;
+  //     const elapsed = (Date.now() - start) / 1000;
+  //     const next = Math.min(90, (elapsed / 90) * 90);
+  //     setPct(Math.round(next));
+  //   }, 300);
+  //   return () => clearInterval(t);
+  // }, []);
+
   useEffect(() => {
+    const duration = 15_000; // 15 saniye
     const start = Date.now();
+
+    const easeOut = (t: number) => {
+      // hızlı başlar, yavaş biter
+      return 1 - Math.pow(1 - t, 3);
+    };
+
     const t = setInterval(() => {
       if (finishedRef.current) return;
-      const elapsed = (Date.now() - start) / 1000;
-      const next = Math.min(90, (elapsed / 90) * 90);
+
+      const elapsed = Date.now() - start;
+
+      // 0 → 1 arası ilerleme
+      const progress = Math.min(elapsed / duration, 1);
+
+      // easing uygulanmış değer
+      const eased = easeOut(progress);
+
+      // max %90
+      const next = eased * 90;
+
       setPct(Math.round(next));
-    }, 300);
+    }, 100);
+
     return () => clearInterval(t);
   }, []);
 

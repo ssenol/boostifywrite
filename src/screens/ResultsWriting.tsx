@@ -1,143 +1,158 @@
-// 07 · Results · Writing (annotated essay)
-// Inline numbered annotations over the essay; tappable peek sheet
-// anchored to the bottom of the screen, collapsible.
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 
 import ResultsShell from './ResultsShell';
 import FilterChip from '@/components/FilterChip';
 import IconButton from '@/components/IconButton';
 import { IconChevLeft, IconChevRight } from '@/components/Icons';
-import { colors, fonts, radii, type } from '@/theme';
+import { useReport, isInlineCorrection } from '@/context/ReportContext';
+import { colors, fonts, radii } from '@/theme';
+import type { InlineCorrection } from '@/types/api';
+import type { HomeStackParamList } from '@/navigation/types';
 
+type Route = RouteProp<HomeStackParamList, 'ResultsWriting'>;
 type AnnKind = 'grammar' | 'cohesion' | 'vocab';
-type Ann = { kind: AnnKind; badText: string; goodText: string; text: string };
 
-const ANNS: Record<number, Ann> = {
-  1: { kind: 'grammar',  badText: 'the',         goodText: '∅ (drop the article)',
-       text: '"the" is unnecessary here. Use the bare proper noun.' },
-  2: { kind: 'cohesion', badText: 'Also',        goodText: 'In addition, / What is more,',
-       text: '"Also" at sentence start is A2-level. Try a B1 linker.' },
-  3: { kind: 'vocab',    badText: 'facilities',  goodText: 'amenities / public spaces',
-       text: 'Good topic-word — but "amenities" is one step up the lexis ladder.' },
-  4: { kind: 'vocab',    badText: 'very good',   goodText: 'invaluable, remarkably effective',
-       text: '"Very + adjective" is A1-level. At A2/B1, use a single stronger adjective to lift your Lexical Range score.' },
-  5: { kind: 'grammar',  badText: 'people scrolling', goodText: 'They scroll / are scrolling',
-       text: 'Incomplete verb form. Pair the subject with a finite verb.' },
-  6: { kind: 'grammar',  badText: 'Different country', goodText: 'people from different countries',
-       text: 'Adjective + plural noun mismatch. "country" should be plural.' },
-  7: { kind: 'cohesion', badText: 'it depends',  goodText: 'a clearer stance',
-       text: 'Hedging weakens the conclusion. Commit to one side.' },
+const KIND_COLOR: Record<AnnKind, string> = {
+  grammar:  colors.rubricGrammar,
+  cohesion: colors.rubricCohesion,
+  vocab:    colors.rubricLexical,
+};
+const KIND_SOFT: Record<AnnKind, string> = {
+  grammar:  colors.rubricGrammarSoft,
+  cohesion: colors.rubricCohesionSoft,
+  vocab:    colors.rubricLexicalSoft,
+};
+const KIND_LABEL: Record<AnnKind, string> = {
+  grammar: 'GRAMMAR', cohesion: 'COHESION', vocab: 'LEXICAL RANGE',
 };
 
-const annColor = (k: AnnKind) =>
-  ({ grammar: colors.rubricGrammar, cohesion: colors.rubricCohesion, vocab: colors.rubricLexical }[k]);
-const annSoft = (k: AnnKind) =>
-  ({ grammar: colors.rubricGrammarSoft, cohesion: colors.rubricCohesionSoft, vocab: colors.rubricLexicalSoft }[k]);
-const kindLabel = (k: AnnKind) =>
-  ({ grammar: 'GRAMMAR', cohesion: 'COHESION', vocab: 'LEXICAL RANGE' }[k]);
+// API kriter adından kind'a haritalama
+function criterionToKind(name: string): AnnKind {
+  const n = name.toLowerCase();
+  if (n.includes('gramm')) return 'grammar';
+  if (n.includes('coher')) return 'cohesion';
+  return 'vocab';
+}
+
+type Ann = InlineCorrection & { kind: AnnKind };
 
 export default function ResultsWriting() {
-  const [filter, setFilter] = useState<'All' | 'Grammar' | 'Vocab' | 'Cohesion'>('All');
-  const [pick,   setPick]   = useState(4);
+  const { solvedTaskId } = useRoute<Route>().params;
+  const { report } = useReport();
+  const [filter, setFilter]   = useState<'All' | 'Grammar' | 'Cohesion' | 'Vocab'>('All');
+  const [pick,   setPick]     = useState(0);
   const [expanded, setExpanded] = useState(true);
 
-  // Auto-expand whenever picked annotation changes.
+  // Tüm InlineCorrection'ları topla
+  const allAnns: Ann[] = [];
+  if (report) {
+    for (const entry of report.result) {
+      const kind = criterionToKind(
+        (entry.result as any)?.criterion ?? entry.name ?? ''
+      );
+      const issues: unknown[] = (entry.result as any)?.issues ?? [];
+      for (const issue of issues) {
+        if (isInlineCorrection(issue)) {
+          allAnns.push({ ...issue, kind });
+        }
+      }
+    }
+  }
+
+  const filtered = filter === 'All'
+    ? allAnns
+    : allAnns.filter(a => a.kind === filter.toLowerCase());
+
+  // pick index'i sınırla
+  const safeIdx = Math.min(pick, Math.max(0, filtered.length - 1));
+  const ann     = filtered[safeIdx];
+
   useEffect(() => { setExpanded(true); }, [pick]);
 
-  const a = ANNS[pick];
+  const counts = {
+    grammar:  allAnns.filter(a => a.kind === 'grammar').length,
+    cohesion: allAnns.filter(a => a.kind === 'cohesion').length,
+    vocab:    allAnns.filter(a => a.kind === 'vocab').length,
+  };
 
-  // ── Bottom peek sheet ──────────────────────────────────────
   const peekSheet = (
     <View style={[styles.peek, expanded ? styles.peekExpanded : styles.peekCollapsed]}>
       <Pressable onPress={() => setExpanded(e => !e)} style={styles.handle}/>
 
-      {/* Header row */}
-      <Pressable onPress={() => setExpanded(e => !e)} style={styles.peekHeader}>
-        <View style={[styles.numberBadge, { backgroundColor: annColor(a.kind) }]}>
-          <Text style={styles.numberText}>{pick}</Text>
-        </View>
-        <Text style={[styles.kindLabel, { color: annColor(a.kind) }]}>{kindLabel(a.kind)}</Text>
-        <View style={{ flex: 1 }}/>
-        <Text style={styles.counter}>{pick}/7</Text>
-        <IconButton size={30} onPress={() => setPick(p => Math.max(1, p - 1))}>
-          <IconChevLeft size={14} color={colors.textPrimary}/>
-        </IconButton>
-        <IconButton size={30} onPress={() => setPick(p => Math.min(7, p + 1))}>
-          <IconChevRight size={14} color={colors.textPrimary}/>
-        </IconButton>
-      </Pressable>
+      {ann ? (
+        <>
+          <Pressable onPress={() => setExpanded(e => !e)} style={styles.peekHeader}>
+            <View style={[styles.numberBadge, { backgroundColor: KIND_COLOR[ann.kind] }]}>
+              <Text style={styles.numberText}>{safeIdx + 1}</Text>
+            </View>
+            <Text style={[styles.kindLabel, { color: KIND_COLOR[ann.kind] }]}>{KIND_LABEL[ann.kind]}</Text>
+            <View style={{ flex: 1 }}/>
+            <Text style={styles.counter}>{safeIdx + 1}/{filtered.length}</Text>
+            <IconButton size={30} onPress={() => setPick(p => Math.max(0, p - 1))}>
+              <IconChevLeft size={14} color={colors.textPrimary}/>
+            </IconButton>
+            <IconButton size={30} onPress={() => setPick(p => Math.min(filtered.length - 1, p + 1))}>
+              <IconChevRight size={14} color={colors.textPrimary}/>
+            </IconButton>
+          </Pressable>
 
-      {/* Suggestion line */}
-      <Text style={styles.suggestion} numberOfLines={expanded ? undefined : 1}>
-        <Text style={styles.suggestionBad}>{a.badText}</Text>
-        <Text style={styles.suggestionArrow}> → </Text>
-        <Text style={styles.suggestionGood}>{a.goodText}</Text>
-      </Text>
+          <Text style={styles.suggestion} numberOfLines={expanded ? undefined : 1}>
+            <Text style={styles.suggestionBad}>{ann.wrongWord || ann.wrongContent}</Text>
+            <Text style={styles.suggestionArrow}> → </Text>
+            <Text style={styles.suggestionGood}>{ann.correctWord || ann.correctedContent}</Text>
+          </Text>
 
-      {/* Explanation — only when expanded */}
-      {expanded ? (
-        <Text style={styles.explain}>{a.text}</Text>
-      ) : null}
+          {expanded && !!ann.detailFeedbackWithReason && (
+            <Text style={styles.explain}>{ann.detailFeedbackWithReason}</Text>
+          )}
+          {expanded && !!ann.exampleOfUsage && (
+            <Text style={styles.example}>{ann.exampleOfUsage}</Text>
+          )}
+        </>
+      ) : (
+        <Text style={{ fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary, padding: 8 }}>
+          No corrections found.
+        </Text>
+      )}
     </View>
   );
 
-  // ── Inline annotated chunk ─────────────────────────────────
-  const Mark = ({ n }: { n: number }) => {
-    const data = ANNS[n];
-    if (filter !== 'All' && filter.toLowerCase() !== data.kind) {
-      return <Text>{data.badText}</Text>;
-    }
-    const c = annColor(data.kind);
-    const isPick = pick === n;
-    return (
-      <Text>
-        <Text onPress={() => setPick(n)} style={{
-          backgroundColor: data.kind === 'grammar' ? 'transparent' : annSoft(data.kind),
-          borderBottomWidth: data.kind === 'grammar' ? 2 : 0,
-          borderBottomColor: c,
-        }}>{data.badText}</Text>
-        <Text onPress={() => setPick(n)} style={[
-          styles.markBadge,
-          { backgroundColor: c, transform: [{ scale: isPick ? 1.15 : 1 }] },
-        ]}> {n} </Text>
-      </Text>
-    );
-  };
-
   return (
-    <ResultsShell active="Writing" bottomOverlay={peekSheet}>
+    <ResultsShell active="Writing" solvedTaskId={solvedTaskId} bottomOverlay={peekSheet}>
       {/* Filter chips */}
       <View style={styles.filters}>
-        <FilterChip label="All"      count={11} active={filter==='All'}      onPress={() => setFilter('All')}/>
-        <FilterChip label="Grammar"  count={7}  color={colors.rubricGrammar}  active={filter==='Grammar'}  onPress={() => setFilter('Grammar')}/>
-        <FilterChip label="Vocab"    count={3}  color={colors.rubricLexical}  active={filter==='Vocab'}    onPress={() => setFilter('Vocab')}/>
-        <FilterChip label="Cohesion" count={1}  color={colors.rubricCohesion} active={filter==='Cohesion'} onPress={() => setFilter('Cohesion')}/>
+        <FilterChip label="All"      count={allAnns.length} active={filter === 'All'}      onPress={() => { setFilter('All');      setPick(0); }}/>
+        <FilterChip label="Grammar"  count={counts.grammar}  color={colors.rubricGrammar}  active={filter === 'Grammar'}  onPress={() => { setFilter('Grammar');  setPick(0); }}/>
+        <FilterChip label="Cohesion" count={counts.cohesion} color={colors.rubricCohesion} active={filter === 'Cohesion'} onPress={() => { setFilter('Cohesion'); setPick(0); }}/>
+        <FilterChip label="Vocab"    count={counts.vocab}    color={colors.rubricLexical}  active={filter === 'Vocab'}    onPress={() => { setFilter('Vocab');    setPick(0); }}/>
       </View>
 
-      <Text style={styles.essayTitle}>My Town & Neighbourhood</Text>
+      {/* Correction list */}
+      <View style={{ gap: 8 }}>
+        {filtered.map((a, i) => (
+          <Pressable key={i} onPress={() => { setPick(i); setExpanded(true); }}
+            style={[styles.corrRow, i === safeIdx && { borderColor: KIND_COLOR[a.kind] }]}
+          >
+            <View style={[styles.corrBadge, { backgroundColor: KIND_COLOR[a.kind] }]}>
+              <Text style={styles.corrBadgeText}>{i + 1}</Text>
+            </View>
+            <View style={[styles.corrPill, { backgroundColor: KIND_SOFT[a.kind] }]}>
+              <Text style={[styles.corrWrong, { color: KIND_COLOR[a.kind] }]}>
+                {a.wrongWord || a.wrongContent}
+              </Text>
+            </View>
+            <Text style={styles.corrArrow}>→</Text>
+            <Text style={styles.corrGood} numberOfLines={1}>
+              {a.correctWord || a.correctedContent}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
-      <Text style={styles.para}>
-        My town is called Bursa. It is a big city in <Mark n={1}/> north-west of Turkey.
-        There are many good things about living here.
-      </Text>
-      <Text style={[type.labelSm, styles.paraLabel]}>¶2 — ADVANTAGES</Text>
-      <Text style={styles.para}>
-        <Mark n={2}/>, we have a lot of historic places and <Mark n={3}/> for young people.
-        The food is <Mark n={4}/> and traditional. My neighbourhood is quiet and I can walk to school.
-      </Text>
-      <Text style={[type.labelSm, styles.paraLabel]}>¶3 — DISADVANTAGES</Text>
-      <Text style={styles.para}>
-        However, there are some problems. In summer, <Mark n={5}/> the streets all day because of tourism.{' '}
-        <Mark n={6}/> people come here and it makes traffic jam.
-      </Text>
-      <Text style={[type.labelSm, styles.paraLabel]}>¶4 — CONCLUSION</Text>
-      <Text style={styles.para}>
-        In my opinion, <Mark n={7}/> on what you like, but I prefer my town because it is peaceful.
-      </Text>
-
-      {/* Spacer so last para isn't hidden behind peek */}
-      <View style={{ height: 280 }}/>
+      <View style={{ height: 300 }}/>
     </ResultsShell>
   );
 }
@@ -145,38 +160,47 @@ export default function ResultsWriting() {
 const styles = StyleSheet.create({
   filters: { flexDirection: 'row', gap: 6, marginBottom: 14, flexWrap: 'wrap' },
 
-  essayTitle: { fontFamily: fonts.sansSb, fontSize: 22, marginBottom: 12, letterSpacing: -0.3 },
-  para: { fontFamily: fonts.sans, fontSize: 16, lineHeight: 30 },
-  paraLabel: { marginTop: 18, marginBottom: 8 },
-
-  markBadge: {
-    color: '#fff', fontFamily: fonts.monoSb, fontSize: 11,
-    borderRadius: 4, paddingHorizontal: 3,
+  corrRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    padding: 10, borderRadius: radii.md,
+    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.bgCard,
   },
+  corrBadge: {
+    width: 22, height: 22, borderRadius: 6,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  corrBadgeText: { fontFamily: fonts.monoSb, fontSize: 11, color: '#fff' },
+  corrPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radii.sm },
+  corrWrong: { fontFamily: fonts.sansSb, fontSize: 13, textDecorationLine: 'line-through' },
+  corrArrow: { fontFamily: fonts.sans, fontSize: 13, color: colors.textTertiary },
+  corrGood:  { flex: 1, fontFamily: fonts.sansSb, fontSize: 13, color: colors.brandGreenDeep },
 
   peek: {
     backgroundColor: colors.bgCard,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 18,
-    shadowColor: '#0E1116', shadowOpacity: 0.10, shadowRadius: 32, shadowOffset: { width: 0, height: -12 }, elevation: 12,
+    shadowColor: '#0E1116', shadowOpacity: 0.10, shadowRadius: 32,
+    shadowOffset: { width: 0, height: -12 }, elevation: 12,
   },
   peekExpanded:  { maxHeight: 280 },
   peekCollapsed: { maxHeight: 100, overflow: 'hidden' },
-  handle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 99, backgroundColor: colors.borderStrong, marginVertical: 8 },
-
-  peekHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  numberBadge: {
-    width: 26, height: 26, borderRadius: 7,
-    alignItems: 'center', justifyContent: 'center',
+  handle: {
+    alignSelf: 'center', width: 44, height: 5, borderRadius: 99,
+    backgroundColor: colors.borderStrong, marginVertical: 8,
   },
-  numberText: { fontFamily: fonts.monoSb, fontSize: 13, color: '#fff' },
-  kindLabel:  { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.8 },
-  counter:    { fontFamily: fonts.mono, fontSize: 12, color: colors.textTertiary },
 
-  suggestion: { marginTop: 10, fontFamily: fonts.sansSb, fontSize: 15 },
+  peekHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  numberBadge: { width: 26, height: 26, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  numberText:  { fontFamily: fonts.monoSb, fontSize: 13, color: '#fff' },
+  kindLabel:   { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 0.8 },
+  counter:     { fontFamily: fonts.mono, fontSize: 12, color: colors.textTertiary },
+
+  suggestion:      { marginTop: 10, fontFamily: fonts.sansSb, fontSize: 15 },
   suggestionBad:   { color: colors.textTertiary, textDecorationLine: 'line-through' },
   suggestionArrow: { color: colors.textPrimary },
   suggestionGood:  { color: colors.brandGreenDeep },
 
   explain: { marginTop: 10, fontFamily: fonts.sans, fontSize: 13.5, color: colors.textSecondary, lineHeight: 20 },
+  example: { marginTop: 8, fontFamily: fonts.sans, fontSize: 13, color: colors.textTertiary, lineHeight: 19 },
 });
