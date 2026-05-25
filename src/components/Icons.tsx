@@ -41,6 +41,12 @@ export const IconChevRight = ({ size = 16, color = '#000' }: P) => (
   </Svg>
 );
 
+export const IconChevDown = ({ size = 16, color = '#000' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <Path d="M3.5 6L8 10.5L12.5 6" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
 export const IconDownload = ({ size = 18, color = '#000' }: P) => (
   <Svg width={size} height={size} viewBox="0 0 18 18" fill="none">
     <Path d="M9 2.5V11.5M9 11.5L5.5 8M9 11.5L12.5 8" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>

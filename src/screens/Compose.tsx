@@ -1,6 +1,6 @@
 // 04 · Compose — yazma yüzeyi, gerçek API ile
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, TextInput, ScrollView, Keyboard, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, TextInput, ScrollView, Keyboard, Animated, PanResponder, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -9,7 +9,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenSurface } from '@/components/Screen';
 import IconButton from '@/components/IconButton';
 import ProgressBar from '@/components/ProgressBar';
-import { IconChevLeft, IconCheck, IconArrow } from '@/components/Icons';
+import { IconChevLeft, IconCheck, IconArrow, IconChevDown } from '@/components/Icons';
 import { fetchTaskContent, submitWriting } from '@/api';
 import HtmlText from '@/components/HtmlText';
 import { colors, fonts, radii, type } from '@/theme';
@@ -30,17 +30,53 @@ export default function Compose() {
   const { exercise: ex, exerciseToken } = route.params;
   const meta = ex.assignmentMetaData.details;
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef   = useRef<ScrollView>(null);
+  const panY        = useRef(new Animated.Value(0)).current;
+  const expandAnim  = useRef(new Animated.Value(1)).current; // 1=açık, 0=kapalı
+  const expandedRef = useRef(true);
+
+  const peekMaxHeight    = expandAnim.interpolate({ inputRange: [0, 1], outputRange: [95, 320] });
+  const chevronRotation  = expandAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '0deg'] });
+
+  function animateExpand(toExpanded: boolean) {
+    expandedRef.current = toExpanded;
+    setExpanded(toExpanded);
+    Animated.spring(expandAnim, { toValue: toExpanded ? 1 : 0, useNativeDriver: false, bounciness: 4 }).start();
+  }
 
   const [tab,            setTab]            = useState<'Prompt' | 'Outline' | 'Vocab'>('Outline');
   const [expanded,       setExpanded]       = useState(true);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, { dy, dx }) =>
+        expandedRef.current && dy > 8 && dy > Math.abs(dx),
+      onPanResponderMove: (_, { dy }) => {
+        if (dy > 0) panY.setValue(dy);
+      },
+      onPanResponderRelease: (_, { dy, vy }) => {
+        if (dy > 60 || vy > 0.5) {
+          panY.setValue(0);
+          Animated.spring(expandAnim, { toValue: 0, useNativeDriver: false, bounciness: 4 }).start();
+          expandedRef.current = false;
+          setExpanded(false);
+        } else {
+          Animated.spring(panY, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(panY, { toValue: 0, useNativeDriver: true }).start();
+      },
+    })
+  ).current;
+
   // Klavye açılınca peek kapat, kapanınca sıfırla
   useEffect(() => {
     const show = Keyboard.addListener('keyboardWillShow', e => {
       setKeyboardHeight(e.endCoordinates.height);
-      setExpanded(false);
+      animateExpand(false);
     });
     const hide = Keyboard.addListener('keyboardWillHide', () => {
       setKeyboardHeight(0);
@@ -164,82 +200,92 @@ export default function Compose() {
       </ScrollView>
 
       {/* Peek sheet */}
-      <View style={[styles.peek, expanded ? styles.peekExpanded : styles.peekCollapsed, { bottom: barBottom + barHeight }]}>
-        <Pressable onPress={() => setExpanded(e => !e)} style={styles.peekHandle}/>
+      <Animated.View style={[styles.peek, { maxHeight: peekMaxHeight, overflow: 'hidden', bottom: barBottom + barHeight, transform: [{ translateY: panY }] }]}>
+        {/* Sürükleme bölgesi: handle + sekme satırı — içerik scroll'uyla çakışmaz */}
+        <View {...panResponder.panHandlers}>
+          <Pressable onPress={() => { Keyboard.dismiss(); animateExpand(!expandedRef.current); }} style={styles.peekHandle}/>
 
-        <View style={styles.peekTabs}>
-          {(['Prompt', 'Outline', 'Vocab'] as const).map(t => {
-            const active = tab === t;
-            const count  =
-              t === 'Outline' && outlines.length > 0 ? `${done.length}/${outlines.length}` :
-              t === 'Vocab'   && keywords.length  > 0 ? String(keywords.length) :
-              null;
-            return (
-              <Pressable key={t} onPress={() => { setTab(t); setExpanded(true); }} style={[
-                styles.peekTab,
-                active
-                  ? { backgroundColor: colors.bgInverse }
-                  : { backgroundColor: colors.bgCardTint, borderWidth: 1, borderColor: colors.border },
-              ]}>
-                <Text style={[styles.peekTabLabel, { color: active ? '#fff' : colors.textPrimary }]}>{t}</Text>
-                {count ? (
-                  <Text style={[styles.peekTabCount, { color: active ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
-                    {count}
-                  </Text>
-                ) : null}
-              </Pressable>
-            );
-          })}
+          <View style={styles.peekTabs}>
+            {(['Prompt', 'Outline', 'Vocab'] as const).map(t => {
+              const active = tab === t;
+              const count  =
+                t === 'Outline' && outlines.length > 0 ? `${done.length}/${outlines.length}` :
+                t === 'Vocab'   && keywords.length  > 0 ? String(keywords.length) :
+                null;
+              return (
+                <Pressable key={t} onPress={() => { Keyboard.dismiss(); setTab(t); animateExpand(true); }} style={[
+                  styles.peekTab,
+                  active
+                    ? { backgroundColor: colors.bgInverse }
+                    : { backgroundColor: colors.bgCardTint, borderWidth: 1, borderColor: colors.border },
+                ]}>
+                  <Text style={[styles.peekTabLabel, { color: active ? '#fff' : colors.textPrimary }]}>{t}</Text>
+                  {count ? (
+                    <Text style={[styles.peekTabCount, { color: active ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
+                      {count}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+            <IconButton
+              size={32}
+              onPress={() => { Keyboard.dismiss(); animateExpand(!expandedRef.current); }}
+              style={{ marginLeft: 'auto' }}
+            >
+              <Animated.View style={{ transform: [{ rotate: chevronRotation }] }}>
+                <IconChevDown size={14} color={colors.textSecondary}/>
+              </Animated.View>
+            </IconButton>
+          </View>
         </View>
 
-        {expanded && (
-          <View style={{ marginTop: 14 }}>
-            {tab === 'Outline' && (
-              <View style={{ gap: 6, paddingBottom: 12 }}>
-                {outlines.length === 0 ? (
-                  <Text style={styles.emptyHint}>No structure guide for this assignment.</Text>
-                ) : outlines.map((o, i) => {
-                  const isDone  = done.includes(o.id);
-                  const isFirst = i === 0 && !isDone;
-                  return (
-                    <Pressable key={o.id} onPress={() => toggle(o.id)} style={[
-                      styles.outlineRow,
-                      isFirst && { borderColor: colors.brandBlue, backgroundColor: colors.brandBlueSoft },
-                    ]}>
-                      <View style={[styles.checkbox, isDone && { backgroundColor: colors.brandGreen, borderWidth: 0 }]}>
-                        {isDone && <IconCheck size={12} color="#fff"/>}
-                      </View>
-                      <Text style={[
-                        styles.outlineLabel,
-                        isDone && { color: colors.textSecondary, textDecorationLine: 'line-through' },
-                      ]}>{o.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
-            {tab === 'Prompt' && (
-              loadingQ
-                ? <ActivityIndicator color={colors.brandBlue}/>
-                : <HtmlText
-                    html={question?.question.questionContent ?? ex.name}
-                    style={styles.promptText}
-                  />
-            )}
-            {tab === 'Vocab' && (
-              keywords.length === 0
-                ? <Text style={styles.emptyHint}>No vocabulary hints for this assignment.</Text>
-                : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 12 }}>
-                    {keywords.map(k => (
-                      <View key={k} style={styles.vocabChip}>
-                        <Text style={styles.vocabText}>{k}</Text>
-                      </View>
-                    ))}
-                  </View>
-            )}
-          </View>
-        )}
-      </View>
+        <View style={{ marginTop: 14 }}>
+          {tab === 'Outline' && (
+            <View style={{ gap: 6, paddingBottom: 12 }}>
+              {outlines.length === 0 ? (
+                <Text style={styles.emptyHint}>No structure guide for this assignment.</Text>
+              ) : outlines.map((o, i) => {
+                const isDone  = done.includes(o.id);
+                const isFirst = i === 0 && !isDone;
+                return (
+                  <Pressable key={o.id} onPress={() => toggle(o.id)} style={[
+                    styles.outlineRow,
+                    isFirst && { borderColor: colors.brandBlue, backgroundColor: colors.brandBlueSoft },
+                  ]}>
+                    <View style={[styles.checkbox, isDone && { backgroundColor: colors.brandGreen, borderWidth: 0 }]}>
+                      {isDone && <IconCheck size={12} color="#fff"/>}
+                    </View>
+                    <Text style={[
+                      styles.outlineLabel,
+                      isDone && { color: colors.textSecondary, textDecorationLine: 'line-through' },
+                    ]}>{o.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+          {tab === 'Prompt' && (
+            loadingQ
+              ? <ActivityIndicator color={colors.brandBlue}/>
+              : <HtmlText
+                  html={question?.question.questionContent ?? ex.name}
+                  style={styles.promptText}
+                />
+          )}
+          {tab === 'Vocab' && (
+            keywords.length === 0
+              ? <Text style={styles.emptyHint}>No vocabulary hints for this assignment.</Text>
+              : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 12 }}>
+                  {keywords.map(k => (
+                    <View key={k} style={styles.vocabChip}>
+                      <Text style={styles.vocabText}>{k}</Text>
+                    </View>
+                  ))}
+                </View>
+          )}
+        </View>
+      </Animated.View>
 
       {/* Alt çubuk: kelime sayısı + gönder */}
       <View style={[styles.bottomBar, { bottom: barBottom, paddingBottom: barPaddingBottom }]}>
@@ -309,8 +355,6 @@ const styles = StyleSheet.create({
     shadowColor: '#0E1116', shadowOpacity: 0.08, shadowRadius: 28,
     shadowOffset: { width: 0, height: -8 }, elevation: 8,
   },
-  peekExpanded:  { maxHeight: 320 },
-  peekCollapsed: { maxHeight: 95, overflow: 'hidden' },
   peekHandle: {
     alignSelf: 'center', width: 40, height: 4, borderRadius: 99,
     backgroundColor: colors.borderStrong, marginBottom: 12, marginTop: 4,
