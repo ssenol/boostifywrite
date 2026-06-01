@@ -23,6 +23,14 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+function wordColor(count: number, min: number): string {
+  if (min === 0) return colors.brandGreen;
+  const pct = (count / min) * 100;
+  if (pct <= 50) return colors.danger;
+  if (pct <= 90) return colors.warning;
+  return colors.brandGreen;
+}
+
 export default function Compose() {
   const nav    = useNavigation<Nav>();
   const route  = useRoute<Route>();
@@ -35,7 +43,7 @@ export default function Compose() {
   const expandAnim  = useRef(new Animated.Value(1)).current; // 1=açık, 0=kapalı
   const expandedRef = useRef(true);
 
-  const peekMaxHeight    = expandAnim.interpolate({ inputRange: [0, 1], outputRange: [95, 320] });
+  const peekMaxHeight    = expandAnim.interpolate({ inputRange: [0, 1], outputRange: [76, 320] });
   const chevronRotation  = expandAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '0deg'] });
 
   function animateExpand(toExpanded: boolean) {
@@ -85,7 +93,7 @@ export default function Compose() {
   }, []);
 
   // peek sheet güncel yüksekliği (maxHeight değerleri)
-  const peekHeight = expanded ? 320 : 95;
+  const peekHeight = expanded ? 320 : 72;
   // Klavye açıkken safe area gerek yok (klavye kaplar), kapalıyken home indicator için ekle
   const barPaddingBottom = keyboardHeight > 0 ? 12 : Math.max(20, insets.bottom + 10);
   const barHeight        = 12 + 48 + barPaddingBottom;
@@ -100,10 +108,8 @@ export default function Compose() {
   const wordCount = countWords(text);
   const minWords  = meta.minWordCount ?? 0;
   const maxWords  = meta.maxWordCount ?? 0;
-  const progress  = maxWords > 0
-    ? Math.min((wordCount / maxWords) * 100, 100)
-    : minWords > 0 ? Math.min((wordCount / minWords) * 100, 100) : 0;
-  const withinRange = wordCount >= minWords && (maxWords === 0 || wordCount <= maxWords);
+  const progress = minWords > 0 ? Math.min((wordCount / minWords) * 100, 100) : 0;
+  const wColor = wordColor(wordCount, minWords);
 
   // Zamanlayıcı
   const timeLimit = ex.assignmentTimeLimit > 0 ? ex.assignmentTimeLimit * 60 : 0;
@@ -131,13 +137,6 @@ export default function Compose() {
     setDone(d => d.includes(id) ? d.filter(x => x !== id) : [...d, id]);
 
   const handleSubmit = async () => {
-    if (wordCount < minWords) {
-      Alert.alert(
-        'Too short',
-        `You need at least ${minWords} words. You have ${wordCount}.`,
-      );
-      return;
-    }
     setSubmitting(true);
     try {
       const res = await submitWriting(text, exerciseToken);
@@ -242,28 +241,42 @@ export default function Compose() {
 
         <View style={{ marginTop: 14 }}>
           {tab === 'Outline' && (
-            <View style={{ gap: 6, paddingBottom: 12 }}>
-              {outlines.length === 0 ? (
-                <Text style={styles.emptyHint}>No structure guide for this assignment.</Text>
-              ) : outlines.map((o, i) => {
-                const isDone  = done.includes(o.id);
-                const isFirst = i === 0 && !isDone;
-                return (
-                  <Pressable key={o.id} onPress={() => toggle(o.id)} style={[
-                    styles.outlineRow,
-                    isFirst && { borderColor: colors.brandBlue, backgroundColor: colors.brandBlueSoft },
-                  ]}>
-                    <View style={[styles.checkbox, isDone && { backgroundColor: colors.brandGreen, borderWidth: 0 }]}>
-                      {isDone && <IconCheck size={12} color="#fff"/>}
-                    </View>
-                    <Text style={[
-                      styles.outlineLabel,
-                      isDone && { color: colors.textSecondary, textDecorationLine: 'line-through' },
-                    ]}>{o.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            outlines.length === 0 ? (
+              <Text style={styles.emptyHint}>No structure guide for this assignment.</Text>
+            ) : (
+              <ScrollView
+                style={{ maxHeight: 200 }}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
+                contentContainerStyle={{ paddingBottom: 12 }}
+              >
+                {outlines.map((o, i) => {
+                  const isDone = done.includes(o.id);
+                  const isLast = i === outlines.length - 1;
+                  return (
+                    <Pressable key={o.id} onPress={() => toggle(o.id)} style={[
+                      styles.outlineRow,
+                      !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
+                    ]}>
+                      <View style={[styles.checkbox, isDone && { backgroundColor: colors.brandGreen, borderWidth: 0 }]}>
+                        {isDone && <IconCheck size={12} color="#fff"/>}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[
+                          styles.outlineLabel,
+                          isDone && { textDecorationLine: 'line-through' },
+                        ]}>{o.label}</Text>
+                        {!!o.purpose && (
+                          <Text style={[styles.outlinePurpose, isDone && { color: colors.textDisabled }]}>
+                            {o.purpose}
+                          </Text>
+                        )}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )
           )}
           {tab === 'Prompt' && (
             loadingQ
@@ -293,7 +306,7 @@ export default function Compose() {
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
             <Text style={[
               styles.wordCount,
-              { color: wordCount >= minWords ? colors.brandBlue : colors.textTertiary },
+              { color: wColor },
             ]}>
               {wordCount}
             </Text>
@@ -304,15 +317,15 @@ export default function Compose() {
           <View style={{ marginTop: 4 }}>
             <ProgressBar
               value={progress}
-              color={withinRange ? colors.brandBlue : wordCount > maxWords && maxWords > 0 ? colors.warning : colors.textDisabled}
+              color={wordCount === 0 ? colors.textDisabled : wColor}
               height={2}
             />
           </View>
         </View>
         <Pressable
           onPress={handleSubmit}
-          disabled={submitting}
-          style={[styles.submit, submitting && { opacity: 0.65 }]}
+          disabled={submitting || wordCount < minWords}
+          style={[styles.submit, (submitting || wordCount < minWords) && { opacity: 0.35 }]}
         >
           {submitting ? (
             <ActivityIndicator color="#fff" size="small"/>
@@ -365,18 +378,19 @@ const styles = StyleSheet.create({
   peekTabCount: { fontFamily: fonts.mono, fontSize: 11 },
 
   outlineRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 12, borderRadius: radii.md,
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    paddingVertical: 8, paddingHorizontal: 4,
+    borderRadius: radii.sm,
   },
   checkbox: {
-    width: 22, height: 22, borderRadius: 6,
+    width: 18, height: 18, borderRadius: 4,
     borderWidth: 1.5, borderColor: colors.borderStrong,
     alignItems: 'center', justifyContent: 'center',
   },
-  outlineLabel: { flex: 1, fontFamily: fonts.sansSb, fontSize: 13, color: colors.textPrimary },
+  outlineLabel:   { fontFamily: fonts.sansSb, fontSize: 13, color: colors.brandBlue },
+  outlinePurpose: { fontFamily: fonts.sans, fontSize: 11, color: colors.textTertiary, marginTop: 2 },
 
-  promptText: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.textSecondary },
+  promptText: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.brandBlue },
   emptyHint:  { fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary },
 
   vocabChip: {
