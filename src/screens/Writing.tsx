@@ -1,4 +1,4 @@
-// 04 · Compose — yazma yüzeyi, gerçek API ile
+// 04 · Writing — yazma yüzeyi, gerçek API ile
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, Keyboard, Animated, PanResponder, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +17,7 @@ import type { HomeStackParamList } from '@/navigation/types';
 import type { ExerciseQuestion } from '@/types/api';
 
 type Nav   = NativeStackNavigationProp<HomeStackParamList>;
-type Route = RouteProp<HomeStackParamList, 'Compose'>;
+type Route = RouteProp<HomeStackParamList, 'Writing'>;
 
 function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
@@ -31,7 +31,7 @@ function wordColor(count: number, min: number): string {
   return colors.brandGreen;
 }
 
-export default function Compose() {
+export default function Writing() {
   const nav    = useNavigation<Nav>();
   const route  = useRoute<Route>();
   const insets = useSafeAreaInsets();
@@ -52,7 +52,7 @@ export default function Compose() {
     Animated.spring(expandAnim, { toValue: toExpanded ? 1 : 0, useNativeDriver: false, bounciness: 4 }).start();
   }
 
-  const [tab,            setTab]            = useState<'Prompt' | 'Outline' | 'Vocab'>('Outline');
+  const [tab,            setTab]            = useState<'Prompt' | 'Outline' | 'Keywords'>('Outline');
   const [expanded,       setExpanded]       = useState(true);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -205,11 +205,11 @@ export default function Compose() {
           <Pressable onPress={() => { Keyboard.dismiss(); animateExpand(!expandedRef.current); }} style={styles.peekHandle}/>
 
           <View style={styles.peekTabs}>
-            {(['Prompt', 'Outline', 'Vocab'] as const).map(t => {
+            {(['Prompt', 'Outline', 'Keywords'] as const).map(t => {
               const active = tab === t;
               const count  =
                 t === 'Outline' && outlines.length > 0 ? `${done.length}/${outlines.length}` :
-                t === 'Vocab'   && keywords.length  > 0 ? String(keywords.length) :
+                t === 'Keywords'   && keywords.length  > 0 ? String(keywords.length) :
                 null;
               return (
                 <Pressable key={t} onPress={() => { Keyboard.dismiss(); setTab(t); animateExpand(true); }} style={[
@@ -286,7 +286,7 @@ export default function Compose() {
                   style={styles.promptText}
                 />
           )}
-          {tab === 'Vocab' && (
+          {tab === 'Keywords' && (
             keywords.length === 0
               ? <Text style={styles.emptyHint}>No vocabulary hints for this assignment.</Text>
               : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 12 }}>

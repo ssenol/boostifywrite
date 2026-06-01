@@ -1,6 +1,6 @@
 // 03 · Assignment Detail — gerçek exercise parametresiyle çalışır
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -13,10 +13,12 @@ import LevelBadge from '@/components/LevelBadge';
 import Button from '@/components/Button';
 import StatTile from '@/components/StatTile';
 import {IconChevLeft, IconArrow, IconChevRight} from '@/components/Icons';
+import HtmlText from '@/components/HtmlText';
 import { useAuth } from '@/context/AuthContext';
-import { generateExerciseToken } from '@/api';
+import { generateExerciseToken, fetchTaskContent } from '@/api';
 import { colors, fonts, radii, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
+import type { ExerciseQuestion } from '@/types/api';
 
 type Nav   = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'AssignmentDetail'>;
@@ -46,14 +48,32 @@ export default function AssignmentDetail() {
   const due  = dueBadge(ex.dueDate);
 
   const insets = useSafeAreaInsets();
-  const [starting, setStarting] = useState(false);
+  const [starting,  setStarting]  = useState(false);
+  const [token,     setToken]     = useState<string | null>(null);
+  const [question,  setQuestion]  = useState<ExerciseQuestion | null>(null);
+  const [loadingQ,  setLoadingQ]  = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    generateExerciseToken(ex, user.userId)
+      .then(t => {
+        setToken(t);
+        return fetchTaskContent(t);
+      })
+      .then(res => {
+        const q = res.data.exercise.exercise.questions[0];
+        if (q) setQuestion(q);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingQ(false));
+  }, []);
 
   const handleStart = async () => {
     if (!user) return;
     setStarting(true);
     try {
-      const exerciseToken = await generateExerciseToken(ex, user.userId);
-      nav.navigate('Compose', { exercise: ex, exerciseToken });
+      const exerciseToken = token ?? await generateExerciseToken(ex, user.userId);
+      nav.navigate('Writing', { exercise: ex, exerciseToken });
     } catch {
       Alert.alert('Could not start', 'Please check your connection and try again.');
     } finally {
@@ -104,7 +124,7 @@ export default function AssignmentDetail() {
         <View style={{ paddingHorizontal: 16, gap: 12 }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <StatTile
-              label="LENGTH"
+              label="WORD COUNT"
               value={meta.maxWordCount
                 ? `${meta.minWordCount}–${meta.maxWordCount}w`
                 : `${meta.minWordCount}+w`}
@@ -130,9 +150,33 @@ export default function AssignmentDetail() {
             </Card>
           )}
 
+          {/* Prompt */}
+          {(loadingQ || question) && (
+            <Card padding={16}>
+              <Text style={[type.label, { marginBottom: 10 }]}>PROMPT</Text>
+              {loadingQ ? (
+                <ActivityIndicator color={colors.brandBlue}/>
+              ) : (
+                <>
+                  {(question?.mediaFiles ?? []).length > 0 && (
+                    <Image
+                      source={{ uri: question!.mediaFiles[0] }}
+                      style={styles.promptImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  <HtmlText
+                    html={question?.question.questionContent ?? ''}
+                    style={styles.promptText}
+                  />
+                </>
+              )}
+            </Card>
+          )}
+
           {keywords.length > 0 && (
               <Card padding={16}>
-                <Text style={[type.label, { marginBottom: 10 }]}>KEY VOCABULARY</Text>
+                <Text style={[type.label, { marginBottom: 12 }]}>KEYWORDS</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                   {keywords.map(k => (
                       <View key={k} style={styles.keyword}>
@@ -223,6 +267,9 @@ const styles = StyleSheet.create({
   gradedDot:   { width: 8, height: 8, borderRadius: 99 },
   gradedLabel: { flex: 1, fontFamily: fonts.sansSb, fontSize: 14, color: colors.textPrimary },
   gradedPct:   { fontFamily: fonts.mono, fontSize: 14, color: colors.textTertiary },
+
+  promptImage: { width: '100%', height: 180, borderRadius: radii.md, marginBottom: 12 },
+  promptText:  { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.textPrimary },
 
   keyword:     { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill, backgroundColor: colors.brandBlueSoft },
   keywordText: { fontFamily: fonts.sans, fontSize: 13, color: colors.brandBlue },

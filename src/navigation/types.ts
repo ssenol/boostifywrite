@@ -30,7 +30,7 @@ export type ResultsTab = 'Overview' | 'Writing' | 'Task' | 'Cohesion' | 'Vocab' 
 export type HomeStackParamList = {
   Home:             undefined;
   AssignmentDetail: { exercise: AssignedExercise };
-  Compose:          { exercise: AssignedExercise; exerciseToken: string };
+  Writing:          { exercise: AssignedExercise; exerciseToken: string };
   Evaluating:       { solvedTaskId: string; taskName: string; wordCount: number };
   Results:          ResultParams;
   Error:            { kind: 'network' | 'evaluation' };
@@ -40,7 +40,7 @@ export type HomeStackParamList = {
 export type AssignmentsStackParamList = {
   AllTasks:         undefined;
   AssignmentDetail: { exercise: AssignedExercise };
-  Compose:          { exercise: AssignedExercise; exerciseToken: string };
+  Writing:          { exercise: AssignedExercise; exerciseToken: string };
   Evaluating:       { solvedTaskId: string; taskName: string; wordCount: number };
   Results:          ResultParams;
   Error:            { kind: 'network' | 'evaluation' };

@@ -23,7 +23,7 @@ import Login             from '@/screens/Login';
 
 import Home             from '@/screens/Home';
 import AssignmentDetail from '@/screens/AssignmentDetail';
-import Compose          from '@/screens/Compose';
+import Writing          from '@/screens/Writing';
 import Evaluating       from '@/screens/Evaluating';
 import ResultsScreen    from '@/screens/ResultsScreen';
 
@@ -55,7 +55,7 @@ function HomeNavigator() {
     <HomeStack.Navigator screenOptions={stackOptions}>
       <HomeStack.Screen name="Home"            component={Home}/>
       <HomeStack.Screen name="AssignmentDetail" component={AssignmentDetail}/>
-      <HomeStack.Screen name="Compose"         component={Compose}/>
+      <HomeStack.Screen name="Writing"         component={Writing}/>
       <HomeStack.Screen name="Evaluating"      component={Evaluating}/>
       <HomeStack.Screen name="Results"         component={ResultsScreen}/>
       <HomeStack.Screen name="Error"           component={ErrorScreen}/>
@@ -68,7 +68,7 @@ function AssignmentsNavigator() {
     <AssignmentsStack.Navigator screenOptions={stackOptions}>
       <AssignmentsStack.Screen name="AllTasks"          component={AllTasks}/>
       <AssignmentsStack.Screen name="AssignmentDetail"  component={AssignmentDetail}/>
-      <AssignmentsStack.Screen name="Compose"           component={Compose}/>
+      <AssignmentsStack.Screen name="Writing"           component={Writing}/>
       <AssignmentsStack.Screen name="Evaluating"        component={Evaluating}/>
       <AssignmentsStack.Screen name="Results"           component={ResultsScreen}/>
       <AssignmentsStack.Screen name="Error"             component={ErrorScreen}/>
