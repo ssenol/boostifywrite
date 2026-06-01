@@ -12,7 +12,7 @@ import IconButton from '@/components/IconButton';
 import LevelBadge from '@/components/LevelBadge';
 import Button from '@/components/Button';
 import StatTile from '@/components/StatTile';
-import { IconChevLeft, IconArrow } from '@/components/Icons';
+import {IconChevLeft, IconArrow, IconChevRight} from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { generateExerciseToken } from '@/api';
 import { colors, fonts, radii, type } from '@/theme';
@@ -69,15 +69,23 @@ export default function AssignmentDetail() {
   return (
     <ScreenSurface edges={['top']}>
       <View style={styles.header}>
-        <IconButton onPress={() => nav.goBack()}>
+        <IconButton onPress={() => {
+          const fromHomeStack = nav.getState()?.routes?.[0]?.name === 'Home';
+          if (fromHomeStack) {
+            (nav.getParent() as any)?.navigate('AssignmentsStack', { screen: 'AllTasks' });
+            nav.goBack();
+          } else {
+            nav.goBack();
+          }
+        }}>
           <IconChevLeft size={18} color={colors.textPrimary}/>
         </IconButton>
-        <Text style={styles.headerTitle}>Assignment</Text>
+        <Text style={styles.headerTitle}>Assignments</Text>
         <View style={{ width: 40 }}/>
       </View>
 
       <ScreenScroll contentStyle={{ paddingBottom: Math.max(100, insets.bottom + 90) }}>
-        <View style={{ padding: 20 }}>
+        <View style={{ padding: 16 }}>
           <View style={styles.metaRow}>
             <LevelBadge level={meta.cefrLevel} size="sm"/>
             {meta.writingGenre && (
@@ -93,7 +101,7 @@ export default function AssignmentDetail() {
           <Text style={styles.assigned}>Assigned {formatDate(ex.startDate)}</Text>
         </View>
 
-        <View style={{ paddingHorizontal: 20, gap: 12 }}>
+        <View style={{ paddingHorizontal: 16, gap: 12 }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <StatTile
               label="LENGTH"
@@ -109,17 +117,30 @@ export default function AssignmentDetail() {
 
           {meta.outlines && meta.outlines.length > 0 && (
             <Card padding={16}>
-              <Text style={[type.label, { marginBottom: 12 }]}>SUGGESTED STRUCTURE</Text>
+              <Text style={[type.label, { marginBottom: 4 }]}>WRITING OUTLINE</Text>
               {meta.outlines.map((o, i) => (
                 <StructureRow
                   key={o.id}
-                  para={`¶${i + 1}`}
+                  para={`${i + 1}`}
                   text={o.label}
                   purpose={o.purpose}
                   last={i === meta.outlines!.length - 1}
                 />
               ))}
             </Card>
+          )}
+
+          {keywords.length > 0 && (
+              <Card padding={16}>
+                <Text style={[type.label, { marginBottom: 10 }]}>KEY VOCABULARY</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {keywords.map(k => (
+                      <View key={k} style={styles.keyword}>
+                        <Text style={styles.keywordText}>{k}</Text>
+                      </View>
+                  ))}
+                </View>
+              </Card>
           )}
 
           {rubricCriteria.length > 0 && (
@@ -130,23 +151,10 @@ export default function AssignmentDetail() {
                   key={c.name}
                   color={RUBRIC_COLORS[i % RUBRIC_COLORS.length]}
                   label={c.name}
-                  pct={`${Math.round(c.weight * 100)}%`}
+                  pct={`${Math.round(c.weight)}%`}
                   last={i === rubricCriteria.length - 1}
                 />
               ))}
-            </Card>
-          )}
-
-          {keywords.length > 0 && (
-            <Card padding={16}>
-              <Text style={[type.label, { marginBottom: 10 }]}>KEY VOCABULARY</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {keywords.map(k => (
-                  <View key={k} style={styles.keyword}>
-                    <Text style={styles.keywordText}>{k}</Text>
-                  </View>
-                ))}
-              </View>
             </Card>
           )}
         </View>
@@ -157,8 +165,8 @@ export default function AssignmentDetail() {
           <ActivityIndicator color={colors.brandBlue} style={{ height: 50 }}/>
         ) : (
           <Button kind="dark" onPress={handleStart}
-            icon={<IconArrow size={16} color="#fff"/>}>
-            Start writing
+            icon={<IconChevRight size={16} color="#fff"/>}>
+            Start Writing
           </Button>
         )}
       </View>
@@ -205,19 +213,19 @@ const styles = StyleSheet.create({
   title:    { fontFamily: fonts.sansSb, fontSize: 28, lineHeight: 32, letterSpacing: -0.4, color: colors.textPrimary },
   assigned: { fontFamily: fonts.sans, fontSize: 13, color: colors.textSecondary, marginTop: 6 },
 
-  structRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 11 },
+  structRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: 0, paddingVertical: 11 },
   structDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline, borderStyle: 'dashed' },
-  structPara:    { fontFamily: fonts.monoSb, fontSize: 13, color: colors.brandBlue, width: 26, paddingTop: 2 },
-  structText:    { fontFamily: fonts.sans, fontSize: 15, color: colors.textPrimary },
-  structPurpose: { fontFamily: fonts.sans, fontSize: 12, color: colors.textTertiary, marginTop: 2 },
+  structPara:    { fontFamily: fonts.monoSb, fontSize: 14, color: colors.brandBlue, width: 20, paddingTop: 2 },
+  structText:    { fontFamily: fonts.sans, fontSize: 14, color: colors.textPrimary },
+  structPurpose: { fontFamily: fonts.sans, fontSize: 11, color: colors.textTertiary, marginTop: 2 },
 
-  gradedRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
+  gradedRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   gradedDot:   { width: 8, height: 8, borderRadius: 99 },
-  gradedLabel: { flex: 1, fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary },
-  gradedPct:   { fontFamily: fonts.mono, fontSize: 12, color: colors.textTertiary },
+  gradedLabel: { flex: 1, fontFamily: fonts.sansSb, fontSize: 14, color: colors.textPrimary },
+  gradedPct:   { fontFamily: fonts.mono, fontSize: 14, color: colors.textTertiary },
 
-  keyword:     { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill, backgroundColor: colors.bgCardTint, borderWidth: 1, borderColor: colors.border },
-  keywordText: { fontFamily: fonts.sans, fontSize: 13, color: colors.textPrimary },
+  keyword:     { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill, backgroundColor: colors.brandBlueSoft },
+  keywordText: { fontFamily: fonts.sans, fontSize: 13, color: colors.brandBlue },
 
   stickyCta: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
