@@ -1,18 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useRoute } from '@react-navigation/native';
-import type { RouteProp } from '@react-navigation/native';
 
-import ResultsShell from './ResultsShell';
 import FilterChip from '@/components/FilterChip';
 import IconButton from '@/components/IconButton';
 import { IconChevLeft, IconChevRight } from '@/components/Icons';
-import { useReport, isInlineCorrection } from '@/context/ReportContext';
+import { useReport, isInlineCorrection, getWritingCorrections } from '@/context/ReportContext';
 import { colors, fonts, radii } from '@/theme';
 import type { InlineCorrection } from '@/types/api';
-import type { HomeStackParamList } from '@/navigation/types';
 
-type Route = RouteProp<HomeStackParamList, 'ResultsWriting'>;
+export type FilterKind = 'All' | 'Grammar' | 'Cohesion' | 'Vocab';
+
+export type WritingSharedState = {
+  filter: FilterKind;
+  pick: number;
+  expanded: boolean;
+  setFilter: React.Dispatch<React.SetStateAction<FilterKind>>;
+  setPick: React.Dispatch<React.SetStateAction<number>>;
+  setExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+};
+
 type AnnKind = 'grammar' | 'cohesion' | 'vocab';
 
 const KIND_COLOR: Record<AnnKind, string> = {
@@ -29,7 +35,6 @@ const KIND_LABEL: Record<AnnKind, string> = {
   grammar: 'GRAMMAR', cohesion: 'COHESION', vocab: 'LEXICAL RANGE',
 };
 
-// API kriter adından kind'a haritalama
 function criterionToKind(name: string): AnnKind {
   const n = name.toLowerCase();
   if (n.includes('gramm')) return 'grammar';
@@ -39,38 +44,36 @@ function criterionToKind(name: string): AnnKind {
 
 type Ann = InlineCorrection & { kind: AnnKind };
 
-export default function ResultsWriting() {
-  const { solvedTaskId } = useRoute<Route>().params;
+// Raporu parse edip annotation listesini döndürür — Provider içinde çağrılmalı
+function useAnnotations(filter: FilterKind): { allAnns: Ann[]; filtered: Ann[] } {
   const { report } = useReport();
-  const [filter, setFilter]   = useState<'All' | 'Grammar' | 'Cohesion' | 'Vocab'>('All');
-  const [pick,   setPick]     = useState(0);
-  const [expanded, setExpanded] = useState(true);
-
-  // Tüm InlineCorrection'ları topla
   const allAnns: Ann[] = [];
   if (report) {
-    for (const entry of report.result) {
-      const kind = criterionToKind(
-        (entry.result as any)?.criterion ?? entry.name ?? ''
-      );
-      const issues: unknown[] = (entry.result as any)?.issues ?? [];
-      for (const issue of issues) {
-        if (isInlineCorrection(issue)) {
-          allAnns.push({ ...issue, kind });
+    // 1. Yeni format: otherCriteria → detailWritingErrorCheck
+    const direct = getWritingCorrections(report.result);
+    if (direct.length > 0) {
+      for (const c of direct) {
+        const kind = criterionToKind(c.type ?? c.subType ?? '');
+        allAnns.push({ ...c, kind });
+      }
+    } else {
+      // 2. Fallback: kriter entry'lerinin issues dizileri (IELTS formatı)
+      for (const entry of report.result) {
+        const kind = criterionToKind((entry.result as any)?.criterion ?? entry.name ?? '');
+        for (const issue of ((entry.result as any)?.issues ?? []) as unknown[]) {
+          if (isInlineCorrection(issue)) allAnns.push({ ...issue, kind });
         }
       }
     }
   }
+  const filtered = filter === 'All' ? allAnns : allAnns.filter(a => a.kind === filter.toLowerCase());
+  return { allAnns, filtered };
+}
 
-  const filtered = filter === 'All'
-    ? allAnns
-    : allAnns.filter(a => a.kind === filter.toLowerCase());
-
-  // pick index'i sınırla
+// ── Correction list (ScrollView içinde render edilir) ─────────────────────────
+export function WritingList({ filter, pick, setFilter, setPick, setExpanded }: WritingSharedState) {
+  const { allAnns, filtered } = useAnnotations(filter);
   const safeIdx = Math.min(pick, Math.max(0, filtered.length - 1));
-  const ann     = filtered[safeIdx];
-
-  useEffect(() => { setExpanded(true); }, [pick]);
 
   const counts = {
     grammar:  allAnns.filter(a => a.kind === 'grammar').length,
@@ -78,7 +81,50 @@ export default function ResultsWriting() {
     vocab:    allAnns.filter(a => a.kind === 'vocab').length,
   };
 
-  const peekSheet = (
+  return (
+    <>
+      <View style={styles.filters}>
+        <FilterChip label="All"      count={allAnns.length}  active={filter === 'All'}      onPress={() => { setFilter('All');      setPick(0); }}/>
+        <FilterChip label="Grammar"  count={counts.grammar}  color={colors.rubricGrammar}   active={filter === 'Grammar'}  onPress={() => { setFilter('Grammar');  setPick(0); }}/>
+        <FilterChip label="Cohesion" count={counts.cohesion} color={colors.rubricCohesion}  active={filter === 'Cohesion'} onPress={() => { setFilter('Cohesion'); setPick(0); }}/>
+        <FilterChip label="Vocab"    count={counts.vocab}    color={colors.rubricLexical}   active={filter === 'Vocab'}    onPress={() => { setFilter('Vocab');    setPick(0); }}/>
+      </View>
+
+      <View style={{ gap: 8 }}>
+        {filtered.map((a, i) => (
+          <Pressable key={i} onPress={() => { setPick(i); setExpanded(true); }}
+            style={[styles.corrRow, i === safeIdx && { borderColor: KIND_COLOR[a.kind] }]}
+          >
+            <View style={[styles.corrBadge, { backgroundColor: KIND_COLOR[a.kind] }]}>
+              <Text style={styles.corrBadgeText}>{i + 1}</Text>
+            </View>
+            <View style={[styles.corrPill, { backgroundColor: KIND_SOFT[a.kind] }]}>
+              <Text style={[styles.corrWrong, { color: KIND_COLOR[a.kind] }]}>
+                {a.wrongWord || a.wrongContent}
+              </Text>
+            </View>
+            <Text style={styles.corrArrow}>→</Text>
+            <Text style={styles.corrGood} numberOfLines={1}>
+              {a.correctWord || a.correctedContent}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={{ height: 300 }}/>
+    </>
+  );
+}
+
+// ── Peek sheet (bottomOverlay olarak render edilir) ───────────────────────────
+export function WritingPeekSheet({ filter, pick, expanded, setPick, setExpanded }: WritingSharedState) {
+  const { filtered } = useAnnotations(filter);
+  const safeIdx = Math.min(pick, Math.max(0, filtered.length - 1));
+  const ann = filtered[safeIdx];
+
+  useEffect(() => { setExpanded(true); }, [pick]);
+
+  return (
     <View style={[styles.peek, expanded ? styles.peekExpanded : styles.peekCollapsed]}>
       <Pressable onPress={() => setExpanded(e => !e)} style={styles.handle}/>
 
@@ -118,42 +164,6 @@ export default function ResultsWriting() {
         </Text>
       )}
     </View>
-  );
-
-  return (
-    <ResultsShell active="Writing" solvedTaskId={solvedTaskId} bottomOverlay={peekSheet}>
-      {/* Filter chips */}
-      <View style={styles.filters}>
-        <FilterChip label="All"      count={allAnns.length} active={filter === 'All'}      onPress={() => { setFilter('All');      setPick(0); }}/>
-        <FilterChip label="Grammar"  count={counts.grammar}  color={colors.rubricGrammar}  active={filter === 'Grammar'}  onPress={() => { setFilter('Grammar');  setPick(0); }}/>
-        <FilterChip label="Cohesion" count={counts.cohesion} color={colors.rubricCohesion} active={filter === 'Cohesion'} onPress={() => { setFilter('Cohesion'); setPick(0); }}/>
-        <FilterChip label="Vocab"    count={counts.vocab}    color={colors.rubricLexical}  active={filter === 'Vocab'}    onPress={() => { setFilter('Vocab');    setPick(0); }}/>
-      </View>
-
-      {/* Correction list */}
-      <View style={{ gap: 8 }}>
-        {filtered.map((a, i) => (
-          <Pressable key={i} onPress={() => { setPick(i); setExpanded(true); }}
-            style={[styles.corrRow, i === safeIdx && { borderColor: KIND_COLOR[a.kind] }]}
-          >
-            <View style={[styles.corrBadge, { backgroundColor: KIND_COLOR[a.kind] }]}>
-              <Text style={styles.corrBadgeText}>{i + 1}</Text>
-            </View>
-            <View style={[styles.corrPill, { backgroundColor: KIND_SOFT[a.kind] }]}>
-              <Text style={[styles.corrWrong, { color: KIND_COLOR[a.kind] }]}>
-                {a.wrongWord || a.wrongContent}
-              </Text>
-            </View>
-            <Text style={styles.corrArrow}>→</Text>
-            <Text style={styles.corrGood} numberOfLines={1}>
-              {a.correctWord || a.correctedContent}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={{ height: 300 }}/>
-    </ResultsShell>
   );
 }
 

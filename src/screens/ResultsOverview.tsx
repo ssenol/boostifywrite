@@ -1,48 +1,38 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import type { RouteProp } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import ResultsShell from './ResultsShell';
 import Card from '@/components/Card';
 import RubricBar from '@/components/RubricBar';
+import HtmlText from '@/components/HtmlText';
 import { IconArrowUp, IconChevRight } from '@/components/Icons';
-import { useReport, findScore, scoreToCefr, getCriteriaEntry, isInlineCorrection } from '@/context/ReportContext';
+import {
+  useReport, findScore, scoreToCefr, getCriteriaEntry, isInlineCorrection,
+  getGlobalFeedback, feedbackMarkdownToHtml,
+} from '@/context/ReportContext';
 import { colors, fonts, radii, type } from '@/theme';
-import type { HomeStackParamList } from '@/navigation/types';
-
-type Nav   = NativeStackNavigationProp<HomeStackParamList>;
-type Route = RouteProp<HomeStackParamList, 'ResultsOverview'>;
+import type { ResultsTab } from '@/navigation/types';
 
 const DIM_CONFIG = [
-  { label: 'Task Achievement',     kw: 'task',  color: colors.rubricTask,     route: 'ResultsTask'     },
-  { label: 'Coherence & Cohesion', kw: 'coher', color: colors.rubricCohesion, route: 'ResultsCohesion' },
-  { label: 'Lexical Range',        kw: 'lexic', color: colors.rubricLexical,  route: 'ResultsLexical'  },
-  { label: 'Grammatical Accuracy', kw: 'gramm', color: colors.rubricGrammar,  route: 'ResultsGrammar'  },
+  { label: 'Task Achievement',     kw: 'task',  color: colors.rubricTask,     tab: 'Task'     as ResultsTab },
+  { label: 'Coherence & Cohesion', kw: 'coher', color: colors.rubricCohesion, tab: 'Cohesion' as ResultsTab },
+  { label: 'Lexical Range',        kw: 'lexic', color: colors.rubricLexical,  tab: 'Vocab'    as ResultsTab },
+  { label: 'Grammatical Accuracy', kw: 'gramm', color: colors.rubricGrammar,  tab: 'Grammar'  as ResultsTab },
 ] as const;
 
-export default function ResultsOverview() {
-  const nav   = useNavigation<Nav>();
-  const route = useRoute<Route>();
-  const { solvedTaskId } = route.params;
-  const { report } = useReport();
+type Props = { onTabChange: (tab: ResultsTab) => void };
 
-  if (!report) return (
-    <ResultsShell active="Overview" solvedTaskId={solvedTaskId}>
-      {null}
-    </ResultsShell>
-  );
+// Provider içinde render edilir — useReport() burada doğru context'i bulur
+export function OverviewContent({ onTabChange }: Props) {
+  const { report } = useReport();
+  if (!report) return null;
 
   const scores = report.criteriaScores ?? {};
 
-  // En düşük skorlu boyut → "biggest lever"
   const lever = DIM_CONFIG
     .map(d => ({ ...d, score: findScore(scores, d.kw) }))
     .sort((a, b) => a.score - b.score)[0];
 
-  // TOP 3 ACTIONS: her boyutun ilk issue'su, en düşük skordan başla
-  type Action = { color: string; text: string };
+  type Action = { color: string; text: string; tab: ResultsTab };
   const actions: Action[] = [];
   for (const d of [...DIM_CONFIG].sort((a, b) => findScore(scores, a.kw) - findScore(scores, b.kw))) {
     if (actions.length >= 3) break;
@@ -52,12 +42,11 @@ export default function ResultsOverview() {
     const text = isInlineCorrection(firstIssue)
       ? firstIssue.detailFeedbackWithReason || `${firstIssue.wrongWord} → ${firstIssue.correctWord}`
       : firstIssue;
-    actions.push({ color: d.color, text });
+    actions.push({ color: d.color, text, tab: d.tab });
   }
 
   return (
-    <ResultsShell active="Overview" solvedTaskId={solvedTaskId}>
-      {/* Overall CEFR */}
+    <>
       <View style={styles.heroCard}>
         <View style={styles.heroBlob}/>
         <View>
@@ -75,7 +64,6 @@ export default function ResultsOverview() {
         </View>
       </View>
 
-      {/* By dimension */}
       <View style={{ marginTop: 22 }}>
         <Text style={[type.label, { marginBottom: 12 }]}>BY DIMENSION</Text>
         <View style={{ gap: 10 }}>
@@ -88,31 +76,45 @@ export default function ResultsOverview() {
                 score={score}
                 level={scoreToCefr(score)}
                 color={d.color}
-                onPress={() => (nav.navigate as any)(d.route, { solvedTaskId })}
+                onPress={() => onTabChange(d.tab)}
               />
             );
           })}
         </View>
       </View>
 
-      {/* Top 3 actions */}
       {actions.length > 0 && (
         <View style={{ marginTop: 22 }}>
           <Text style={[type.label, { marginBottom: 10 }]}>TOP 3 ACTIONS</Text>
           <View style={{ gap: 8 }}>
             {actions.map((a, i) => (
-              <ActionRow key={i} n={i + 1} color={a.color} text={a.text}/>
+              <ActionRow key={i} n={i + 1} color={a.color} text={a.text} onPress={() => onTabChange(a.tab)}/>
             ))}
           </View>
         </View>
       )}
-    </ResultsShell>
+
+      <FeedbackSection result={report.result}/>
+    </>
   );
 }
 
-function ActionRow({ n, color, text }: { n: number; color: string; text: string }) {
+function FeedbackSection({ result }: { result: import('@/types/api').ReportResultEntry[] }) {
+  const html = feedbackMarkdownToHtml(getGlobalFeedback(result));
+  if (!html) return null;
   return (
-    <Card padding={14} style={{ borderLeftWidth: 3, borderLeftColor: color, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+    <View style={{ marginTop: 22 }}>
+      <Text style={[type.label, { marginBottom: 10 }]}>FEEDBACK</Text>
+      <Card padding={18}>
+        <HtmlText html={html} style={styles.feedbackText}/>
+      </Card>
+    </View>
+  );
+}
+
+function ActionRow({ n, color, text, onPress }: { n: number; color: string; text: string; onPress: () => void }) {
+  return (
+    <Card padding={14} onPress={onPress} style={{ borderLeftWidth: 3, borderLeftColor: color, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <Text style={styles.actionNum}>{n}</Text>
       <Text style={styles.actionText}>{text}</Text>
       <IconChevRight size={14} color={colors.textTertiary}/>
@@ -148,5 +150,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansEb, fontSize: 13, color: colors.textSecondary,
     textAlign: 'center', lineHeight: 22,
   },
-  actionText: { flex: 1, fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary },
+  actionText:   { flex: 1, fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary },
+  feedbackText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.textSecondary },
 });

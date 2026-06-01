@@ -4,7 +4,7 @@
 //
 //   Auth gating: user yoksa Login flow, varsa direkt Main
 //   Main Tab:    Home / Assignments / Report / Profile
-//   Home Stack:  Assignments → Detail → Compose → Evaluating → Results*
+//   Home Stack:  Home → Detail → Compose → Evaluating → Results*
 //   Assignments Stack: AllTasks → same deep flow
 
 import React from 'react';
@@ -21,16 +21,11 @@ import OnboardingWelcome from '@/screens/OnboardingWelcome';
 import OnboardingLevel   from '@/screens/OnboardingLevel';
 import Login             from '@/screens/Login';
 
-import Assignments       from '@/screens/Assignments';
-import AssignmentDetail  from '@/screens/AssignmentDetail';
-import Compose           from '@/screens/Compose';
-import Evaluating        from '@/screens/Evaluating';
-import ResultsOverview   from '@/screens/ResultsOverview';
-import ResultsWriting    from '@/screens/ResultsWriting';
-import ResultsTask       from '@/screens/ResultsTask';
-import ResultsCohesion   from '@/screens/ResultsCohesion';
-import ResultsLexical    from '@/screens/ResultsLexical';
-import ResultsGrammar    from '@/screens/ResultsGrammar';
+import Home             from '@/screens/Home';
+import AssignmentDetail from '@/screens/AssignmentDetail';
+import Compose          from '@/screens/Compose';
+import Evaluating       from '@/screens/Evaluating';
+import ResultsScreen    from '@/screens/ResultsScreen';
 
 import AllTasks    from '@/screens/AllTasks';
 import Progress    from '@/screens/Progress';
@@ -51,56 +46,48 @@ const AssignmentsStack = createNativeStackNavigator<AssignmentsStackParamList>()
 const ReportStack      = createNativeStackNavigator<ReportStackParamList>();
 const ProfileStack     = createNativeStackNavigator<ProfileStackParamList>();
 
-const noHeader = { headerShown: false } as const;
+const noHeader      = { headerShown: false } as const;
+const stackOptions  = { headerShown: false, animation: 'slide_from_right' } as const;
 
 
 function HomeNavigator() {
   return (
-    <HomeStack.Navigator screenOptions={noHeader}>
-      <HomeStack.Screen name="Assignments" component={Assignments}/>
+    <HomeStack.Navigator screenOptions={stackOptions}>
+      <HomeStack.Screen name="Home"            component={Home}/>
       <HomeStack.Screen name="AssignmentDetail" component={AssignmentDetail}/>
-      <HomeStack.Screen name="Compose"          component={Compose}/>
-      <HomeStack.Screen name="Evaluating"       component={Evaluating}/>
-      <HomeStack.Screen name="ResultsOverview"  component={ResultsOverview}/>
-      <HomeStack.Screen name="ResultsWriting"   component={ResultsWriting}/>
-      <HomeStack.Screen name="ResultsTask"      component={ResultsTask}/>
-      <HomeStack.Screen name="ResultsCohesion"  component={ResultsCohesion}/>
-      <HomeStack.Screen name="ResultsLexical"   component={ResultsLexical}/>
-      <HomeStack.Screen name="ResultsGrammar"   component={ResultsGrammar}/>
-      <HomeStack.Screen name="Error"            component={ErrorScreen}/>
+      <HomeStack.Screen name="Compose"         component={Compose}/>
+      <HomeStack.Screen name="Evaluating"      component={Evaluating}/>
+      <HomeStack.Screen name="Results"         component={ResultsScreen}/>
+      <HomeStack.Screen name="Error"           component={ErrorScreen}/>
     </HomeStack.Navigator>
   );
 }
 
 function AssignmentsNavigator() {
   return (
-    <AssignmentsStack.Navigator screenOptions={noHeader}>
-      <AssignmentsStack.Screen name="AllTasks"         component={AllTasks}/>
-      <AssignmentsStack.Screen name="AssignmentDetail" component={AssignmentDetail}/>
-      <AssignmentsStack.Screen name="Compose"          component={Compose}/>
-      <AssignmentsStack.Screen name="Evaluating"       component={Evaluating}/>
-      <AssignmentsStack.Screen name="ResultsOverview"  component={ResultsOverview}/>
-      <AssignmentsStack.Screen name="ResultsWriting"   component={ResultsWriting}/>
-      <AssignmentsStack.Screen name="ResultsTask"      component={ResultsTask}/>
-      <AssignmentsStack.Screen name="ResultsCohesion"  component={ResultsCohesion}/>
-      <AssignmentsStack.Screen name="ResultsLexical"   component={ResultsLexical}/>
-      <AssignmentsStack.Screen name="ResultsGrammar"   component={ResultsGrammar}/>
-      <AssignmentsStack.Screen name="Error"            component={ErrorScreen}/>
+    <AssignmentsStack.Navigator screenOptions={stackOptions}>
+      <AssignmentsStack.Screen name="AllTasks"          component={AllTasks}/>
+      <AssignmentsStack.Screen name="AssignmentDetail"  component={AssignmentDetail}/>
+      <AssignmentsStack.Screen name="Compose"           component={Compose}/>
+      <AssignmentsStack.Screen name="Evaluating"        component={Evaluating}/>
+      <AssignmentsStack.Screen name="Results"           component={ResultsScreen}/>
+      <AssignmentsStack.Screen name="Error"             component={ErrorScreen}/>
     </AssignmentsStack.Navigator>
   );
 }
 
 function ReportNavigator() {
   return (
-    <ReportStack.Navigator screenOptions={noHeader}>
-      <ReportStack.Screen name="Report" component={Progress}/>
+    <ReportStack.Navigator screenOptions={stackOptions}>
+      <ReportStack.Screen name="Report"   component={Progress}/>
+      <ReportStack.Screen name="Results"  component={ResultsScreen}/>
     </ReportStack.Navigator>
   );
 }
 
 function ProfileNavigator() {
   return (
-    <ProfileStack.Navigator screenOptions={noHeader}>
+    <ProfileStack.Navigator screenOptions={stackOptions}>
       <ProfileStack.Screen name="Profile" component={Profile}/>
     </ProfileStack.Navigator>
   );

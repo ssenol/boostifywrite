@@ -87,7 +87,7 @@ export default function Evaluating() {
         if (res.data.mainScore > 0) {
           finishedRef.current = true;
           setPct(100);
-          setTimeout(() => nav.replace('ResultsOverview', { solvedTaskId }), 1200);
+          setTimeout(() => nav.replace('Results', { solvedTaskId }), 1200);
         }
       } catch {
         // Sessizce yeniden dene

@@ -43,6 +43,33 @@ export function findScore(scores: Record<string, number>, keyword: string): numb
   return key ? scores[key] : 0;
 }
 
+// "feedback" entry'sinden genel markdown metnini döndürür.
+// Bu, rubric-bazlı değil holistic feedback kullanan görev tipleri için geçerlidir.
+export function getGlobalFeedback(result: ReportResultEntry[]): string {
+  const entry = result.find(e => e.name === 'feedback');
+  return typeof entry?.result === 'string' ? entry.result : '';
+}
+
+// otherCriteria → detailWritingErrorCheck içindeki InlineCorrection listesini döndürür
+export function getWritingCorrections(result: ReportResultEntry[]): InlineCorrection[] {
+  const other = result.find(e => e.name === 'otherCriteria');
+  if (!other || !Array.isArray(other.result)) return [];
+  const check = (other.result as any[]).find((x: any) => x?.name === 'detailWritingErrorCheck');
+  if (!check || !Array.isArray(check.result)) return [];
+  return (check.result as unknown[]).filter((x): x is InlineCorrection => isInlineCorrection(x));
+}
+
+// Markdown → basit HTML: HtmlText bileşeniyle uyumlu dönüşüm
+export function feedbackMarkdownToHtml(md: string): string {
+  return md
+    .replace(/\*{3}\s*\n?/g, '\n\n')                      // *** ayraç → paragraf boşluğu
+    .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')           // **başlık** → <b>
+    .replace(/\*([^*\n]+)\*/g, '$1')                       // *italic* → düz metin
+    .replace(/\n\n+/g, '<br/><br/>')                       // paragraf arası → br
+    .replace(/\n/g, ' ')                                   // satır sonu → boşluk
+    .trim();
+}
+
 // ── Context ─────────────────────────────────────────────────────────
 type Ctx = { report: ReportDetail | null; loading: boolean; error: boolean };
 

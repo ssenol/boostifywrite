@@ -1,37 +1,40 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 
-import ResultsShell, { ResultsTab } from './ResultsShell';
 import Card from '@/components/Card';
 import BulletRow from '@/components/BulletRow';
 import QuoteBlock from '@/components/QuoteBlock';
+import HtmlText from '@/components/HtmlText';
 import { IconCheck } from '@/components/Icons';
-import { useReport, getCriteriaEntry, isInlineCorrection, scoreToCefr, findScore } from '@/context/ReportContext';
+import {
+  useReport, getCriteriaEntry, isInlineCorrection, scoreToCefr, findScore,
+  getGlobalFeedback, feedbackMarkdownToHtml,
+} from '@/context/ReportContext';
 import { colors, fonts, radii, type } from '@/theme';
+import type { ResultsTab } from '@/navigation/types';
 
-const TAB_CONFIG: Record<string, { kw: string; label: string; color: string }> = {
+type DimTab = Extract<ResultsTab, 'Task' | 'Cohesion' | 'Vocab' | 'Grammar'>;
+
+const TAB_CONFIG: Record<DimTab, { kw: string; label: string; color: string }> = {
   Task:     { kw: 'task',  label: 'Task Achievement',     color: colors.rubricTask     },
   Cohesion: { kw: 'coher', label: 'Coherence & Cohesion', color: colors.rubricCohesion },
-  Vocab:    { kw: 'lexic', label: 'Lexical Range',         color: colors.rubricLexical  },
-  Grammar:  { kw: 'gramm', label: 'Grammatical Accuracy',  color: colors.rubricGrammar  },
+  Vocab:    { kw: 'lexic', label: 'Lexical Range',        color: colors.rubricLexical  },
+  Grammar:  { kw: 'gramm', label: 'Grammatical Accuracy', color: colors.rubricGrammar  },
 };
 
-type Props = { tab: ResultsTab; solvedTaskId: string };
-
-export default function DimensionScreen({ tab, solvedTaskId }: Props) {
+// Provider içinde render edilir — useReport() burada doğru context'i bulur
+export function DimensionContent({ tab }: { tab: DimTab }) {
   const { report } = useReport();
   const cfg = TAB_CONFIG[tab];
 
-  if (!report || !cfg) {
-    return <ResultsShell active={tab} solvedTaskId={solvedTaskId}>{null}</ResultsShell>;
-  }
+  if (!report || !cfg) return null;
 
-  const cr        = getCriteriaEntry(report.result, cfg.kw) ?? {};
-  const score     = cr.score ?? findScore(report.criteriaScores, cfg.kw);
-  const level     = scoreToCefr(score);
-  const summary   = cr.observation ?? '';
+  const cr       = getCriteriaEntry(report.result, cfg.kw) ?? {};
+  const score    = cr.score ?? findScore(report.criteriaScores ?? {}, cfg.kw);
+  const level    = scoreToCefr(score);
+  const summary  = cr.observation ?? '';
   const strengths = cr.achievements ?? [];
-  const issues    = cr.issues ?? [];
+  const issues   = cr.issues ?? [];
 
   const stringIssues = issues.filter((i): i is string => !isInlineCorrection(i));
   const corrections  = issues.filter(isInlineCorrection);
@@ -42,8 +45,14 @@ export default function DimensionScreen({ tab, solvedTaskId }: Props) {
     ...corrections.slice(0, 2).map(c => `Fix: "${c.wrongWord}" → "${c.correctWord}"`),
   ].slice(0, 4);
 
+  // Criterion-bazlı veri yoksa genel feedback'e düş
+  const hasCriterionDetail = summary || strengths.length > 0 || issues.length > 0;
+  const globalFeedbackHtml = hasCriterionDetail
+    ? ''
+    : feedbackMarkdownToHtml(getGlobalFeedback(report.result));
+
   return (
-    <ResultsShell active={tab} solvedTaskId={solvedTaskId}>
+    <>
       {/* Summary card */}
       <Card padding={18} style={{ borderLeftWidth: 3, borderLeftColor: cfg.color }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginLeft: 6 }}>
@@ -59,7 +68,7 @@ export default function DimensionScreen({ tab, solvedTaskId }: Props) {
         {!!summary && <Text style={styles.dimSummary}>{summary}</Text>}
       </Card>
 
-      {/* Strengths */}
+      {/* Criterion-bazlı içerik (IELTS tipi görevler) */}
       {strengths.length > 0 && (
         <Card padding={14} style={{ marginTop: 12 }}>
           <SectionLabel color={cfg.color}>STRENGTHS</SectionLabel>
@@ -69,7 +78,6 @@ export default function DimensionScreen({ tab, solvedTaskId }: Props) {
         </Card>
       )}
 
-      {/* Work on */}
       {stringIssues.length > 0 && (
         <Card padding={14} style={{ marginTop: 12 }}>
           <SectionLabel color={colors.rubricTask}>WORK ON</SectionLabel>
@@ -79,7 +87,6 @@ export default function DimensionScreen({ tab, solvedTaskId }: Props) {
         </Card>
       )}
 
-      {/* From → Try */}
       {firstCorr && (
         <Card padding={14} style={{ marginTop: 12 }}>
           <SectionLabel color={cfg.color}>FROM YOUR WRITING</SectionLabel>
@@ -96,7 +103,6 @@ export default function DimensionScreen({ tab, solvedTaskId }: Props) {
         </Card>
       )}
 
-      {/* Practice */}
       {practiceItems.length > 0 && (
         <Card padding={14} style={{ marginTop: 12 }}>
           <SectionLabel color={colors.textPrimary}>PRACTICE THIS WEEK</SectionLabel>
@@ -106,8 +112,16 @@ export default function DimensionScreen({ tab, solvedTaskId }: Props) {
         </Card>
       )}
 
+      {/* Holistic feedback fallback (criterion detayı olmayan görev tipleri) */}
+      {!!globalFeedbackHtml && (
+        <Card padding={16} style={{ marginTop: 12, borderLeftWidth: 3, borderLeftColor: colors.hairline }}>
+          <SectionLabel color={colors.textTertiary}>TEACHER FEEDBACK</SectionLabel>
+          <HtmlText html={globalFeedbackHtml} style={styles.feedbackText}/>
+        </Card>
+      )}
+
       <View style={{ height: 16 }}/>
-    </ResultsShell>
+    </>
   );
 }
 
@@ -143,6 +157,7 @@ const styles = StyleSheet.create({
   dimScore:   { fontFamily: fonts.mono, fontSize: 13, color: colors.textTertiary, marginTop: 2 },
   dimSummary: { marginLeft: 6, marginTop: 12, fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.textSecondary },
   corrExplain: { marginTop: 10, fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 20, color: colors.textSecondary },
+  feedbackText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.textSecondary },
 
   practiceRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   practiceDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline, borderStyle: 'dashed' },

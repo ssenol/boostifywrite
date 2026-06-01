@@ -23,37 +23,33 @@ export type TabParamList = {
 // ── Shared deep-link param type ──
 type ResultParams = { solvedTaskId: string };
 
+// Tab names used within the Results screen (not navigation routes)
+export type ResultsTab = 'Overview' | 'Writing' | 'Task' | 'Cohesion' | 'Vocab' | 'Grammar';
+
 // ── Home stack ──
 export type HomeStackParamList = {
-  Assignments:      undefined;
+  Home:             undefined;
   AssignmentDetail: { exercise: AssignedExercise };
   Compose:          { exercise: AssignedExercise; exerciseToken: string };
   Evaluating:       { solvedTaskId: string; taskName: string; wordCount: number };
-  ResultsOverview:  ResultParams;
-  ResultsWriting:   ResultParams;
-  ResultsTask:      ResultParams;
-  ResultsCohesion:  ResultParams;
-  ResultsLexical:   ResultParams;
-  ResultsGrammar:   ResultParams;
+  Results:          ResultParams;
   Error:            { kind: 'network' | 'evaluation' };
 };
 
-// ── Assignments tab stack (mirros Home flow, starts from AllTasks) ──
+// ── Assignments tab stack (mirrors Home flow, starts from AllTasks) ──
 export type AssignmentsStackParamList = {
   AllTasks:         undefined;
   AssignmentDetail: { exercise: AssignedExercise };
   Compose:          { exercise: AssignedExercise; exerciseToken: string };
   Evaluating:       { solvedTaskId: string; taskName: string; wordCount: number };
-  ResultsOverview:  ResultParams;
-  ResultsWriting:   ResultParams;
-  ResultsTask:      ResultParams;
-  ResultsCohesion:  ResultParams;
-  ResultsLexical:   ResultParams;
-  ResultsGrammar:   ResultParams;
+  Results:          ResultParams;
   Error:            { kind: 'network' | 'evaluation' };
 };
 
-export type ReportStackParamList  = { Report: undefined };
+export type ReportStackParamList = {
+  Report:   undefined;
+  Results:  ResultParams;
+};
 export type ProfileStackParamList = { Profile: undefined };
 
 // ── Convenience screen prop types ──

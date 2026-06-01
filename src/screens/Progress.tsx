@@ -1,16 +1,19 @@
 // Progress — gerçek tamamlanan raporlar + statik CEFR chart
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ScreenSurface, ScreenScroll } from '@/components/Screen';
 import Card from '@/components/Card';
 import SectionHeader from '@/components/SectionHeader';
-import { IconArrowUp } from '@/components/Icons';
+import { IconArrowUp, IconChevRight } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { fetchCompletedReports } from '@/api';
 import { colors, fonts, radii, type } from '@/theme';
 import type { CompletedExercise } from '@/types/api';
+import type { ReportStackParamList } from '@/navigation/types';
 
 // Statik grafik noktaları — gerçek CEFR zaman serisi API'den gelmiyor
 const POINTS = [
@@ -36,6 +39,7 @@ const ACCENT_COLORS = [
 
 export default function Progress() {
   const { user } = useAuth();
+  const nav = useNavigation<NativeStackNavigationProp<ReportStackParamList>>();
 
   const [exercises,  setExercises]  = useState<CompletedExercise[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -168,26 +172,38 @@ export default function Progress() {
           ) : (
             <View style={{ gap: 8 }}>
               {exercises.map((e, i) => {
-                const best = e.attempts.reduce<number>((max, a) => Math.max(max, a.mainScore), 0);
+                const bestAttempt = e.attempts.reduce(
+                  (best, a) => a.mainScore > best.mainScore ? a : best,
+                  e.attempts[0],
+                );
+                if (!bestAttempt) return null;
                 return (
-                  <Card key={e.assignedTaskId} accent={ACCENT_COLORS[i % ACCENT_COLORS.length]} padding={14}>
-                    <View style={[styles.recentRow, { marginLeft: 6 }]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.recentTitle}>{e.taskName}</Text>
-                        <Text style={styles.recentWhen}>
-                          RETURNED {new Date(e.lastSolvedDate).toLocaleDateString('en-US', {
-                            month: 'short', day: 'numeric',
-                          }).toUpperCase()}
-                        </Text>
+                  <Pressable
+                    key={e.assignedTaskId}
+                    onPress={() => nav.navigate('Results', { solvedTaskId: bestAttempt.solvedTaskId })}
+                  >
+                    <Card accent={ACCENT_COLORS[i % ACCENT_COLORS.length]} padding={14}>
+                      <View style={[styles.recentRow, { marginLeft: 6 }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.recentTitle}>{e.taskName}</Text>
+                          <Text style={styles.recentWhen}>
+                            RETURNED {new Date(e.lastSolvedDate).toLocaleDateString('en-US', {
+                              month: 'short', day: 'numeric',
+                            }).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 8, alignSelf: 'center' }}>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={styles.recentScore}>{bestAttempt.mainScore.toFixed(1)}/9</Text>
+                            <Text style={styles.recentAttempts}>
+                              {e.totalAttempts} attempt{e.totalAttempts !== 1 ? 's' : ''}
+                            </Text>
+                          </View>
+                          <IconChevRight size={14} color={colors.textTertiary}/>
+                        </View>
                       </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={styles.recentScore}>{best}/100</Text>
-                        <Text style={styles.recentAttempts}>
-                          {e.totalAttempts} attempt{e.totalAttempts !== 1 ? 's' : ''}
-                        </Text>
-                      </View>
-                    </View>
-                  </Card>
+                    </Card>
+                  </Pressable>
                 );
               })}
             </View>

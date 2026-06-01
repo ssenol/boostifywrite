@@ -1,49 +1,67 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, { SlideInRight, SlideInLeft, SlideOutRight, SlideOutLeft } from 'react-native-reanimated';
 
 import { ScreenSurface } from '@/components/Screen';
 import IconButton from '@/components/IconButton';
 import { IconChevLeft, IconDownload } from '@/components/Icons';
 import { ReportProvider, useReport } from '@/context/ReportContext';
 import { colors, fonts, radii, type } from '@/theme';
-import type { HomeStackParamList } from '@/navigation/types';
+import type { ResultsTab } from '@/navigation/types';
 
-export type ResultsTab = 'Overview' | 'Writing' | 'Task' | 'Cohesion' | 'Vocab' | 'Grammar';
+import { OverviewContent } from './ResultsOverview';
+import { WritingList, WritingPeekSheet } from './ResultsWriting';
+import type { WritingSharedState, FilterKind } from './ResultsWriting';
+import { DimensionContent } from './DimensionScreen';
+
 const TABS: ResultsTab[] = ['Overview', 'Writing', 'Task', 'Cohesion', 'Vocab', 'Grammar'];
 
-const ROUTE_MAP: Record<ResultsTab, keyof HomeStackParamList> = {
-  Overview: 'ResultsOverview',
-  Writing:  'ResultsWriting',
-  Task:     'ResultsTask',
-  Cohesion: 'ResultsCohesion',
-  Vocab:    'ResultsLexical',
-  Grammar:  'ResultsGrammar',
-};
+type Props = { solvedTaskId: string };
 
-type ShellProps = {
-  active: ResultsTab;
-  children: React.ReactNode;
-  bottomOverlay?: React.ReactNode;
-  solvedTaskId?: string;
-};
-
-export default function ResultsShell(props: ShellProps) {
+export default function ResultsShell({ solvedTaskId }: Props) {
   return (
-    <ReportProvider solvedTaskId={props.solvedTaskId ?? ''}>
-      <ShellInner {...props}/>
+    <ReportProvider solvedTaskId={solvedTaskId}>
+      <ShellInner/>
     </ReportProvider>
   );
 }
 
-function ShellInner({ active, children, bottomOverlay, solvedTaskId = '' }: ShellProps) {
-  const nav = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+function ShellInner() {
+  const nav = useNavigation();
   const { loading, error } = useReport();
+
+  const [tab, setTab]       = useState<ResultsTab>('Overview');
+  const prevTabRef          = useRef<ResultsTab>('Overview');
+  const directionRef        = useRef<1 | -1>(1); // 1 = ileri (sağdan), -1 = geri (soldan)
+
+  // Writing sekmesi için paylaşılan state
+  const [wFilter,   setWFilter]   = useState<FilterKind>('All');
+  const [wPick,     setWPick]     = useState(0);
+  const [wExpanded, setWExpanded] = useState(true);
+  const writingState: WritingSharedState = {
+    filter: wFilter, pick: wPick, expanded: wExpanded,
+    setFilter: setWFilter, setPick: setWPick, setExpanded: setWExpanded,
+  };
+
+  const changeTab = (newTab: ResultsTab) => {
+    const oldIdx = TABS.indexOf(tab);
+    const newIdx = TABS.indexOf(newTab);
+    directionRef.current = newIdx >= oldIdx ? 1 : -1;
+    prevTabRef.current = tab;
+    setTab(newTab);
+  };
+
+  const entering = directionRef.current >= 0
+    ? SlideInRight.duration(220)
+    : SlideInLeft.duration(220);
+  const exiting  = directionRef.current >= 0
+    ? SlideOutLeft.duration(180)
+    : SlideOutRight.duration(180);
 
   return (
     <ScreenSurface>
-      {/* Header */}
+      {/* ── Header (sabit, kaymaz) ── */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
           <IconButton onPress={() => nav.goBack()} style={{ marginTop: 4 }}>
@@ -61,17 +79,16 @@ function ShellInner({ active, children, bottomOverlay, solvedTaskId = '' }: Shel
           </IconButton>
         </View>
 
-        {/* Tab pills */}
+        {/* ── Tab pills (sabit) ── */}
         <ScrollView
           horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.pillsRow}
           style={{ marginHorizontal: -20, marginTop: 14 }}
         >
           {TABS.map(t => {
-            const isActive = t === active;
+            const isActive = t === tab;
             return (
-              <Pressable key={t}
-                onPress={() => (nav.navigate as any)(ROUTE_MAP[t], { solvedTaskId })}
+              <Pressable key={t} onPress={() => changeTab(t)}
                 style={[
                   styles.pill,
                   isActive
@@ -86,7 +103,7 @@ function ShellInner({ active, children, bottomOverlay, solvedTaskId = '' }: Shel
         </ScrollView>
       </View>
 
-      {/* Body */}
+      {/* ── İçerik alanı ── */}
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={colors.brandBlue}/>
@@ -98,18 +115,27 @@ function ShellInner({ active, children, bottomOverlay, solvedTaskId = '' }: Shel
           </Text>
         </View>
       ) : (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
+        // key değişince Reanimated eski içeriği çıkarır, yenisini kaydırarak getirir
+        <Animated.View key={tab} entering={entering} exiting={exiting} style={{ flex: 1, overflow: 'hidden' }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {tab === 'Overview' && <OverviewContent onTabChange={changeTab}/>}
+            {tab === 'Writing'  && <WritingList {...writingState}/>}
+            {tab === 'Task'     && <DimensionContent tab="Task"/>}
+            {tab === 'Cohesion' && <DimensionContent tab="Cohesion"/>}
+            {tab === 'Vocab'    && <DimensionContent tab="Vocab"/>}
+            {tab === 'Grammar'  && <DimensionContent tab="Grammar"/>}
+          </ScrollView>
+        </Animated.View>
       )}
 
-      {bottomOverlay && (
+      {/* ── Writing peek overlay (yalnızca Writing sekmesinde) ── */}
+      {!loading && !error && tab === 'Writing' && (
         <View pointerEvents="box-none" style={styles.overlayWrap}>
-          {bottomOverlay}
+          <WritingPeekSheet {...writingState}/>
         </View>
       )}
     </ScreenSurface>
