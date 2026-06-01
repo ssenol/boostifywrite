@@ -41,7 +41,7 @@ export default function TabBar({
 
 const styles = StyleSheet.create({
   bar: {
-    position: 'absolute', left: 16, right: 16, bottom: 24,
+    position: 'absolute', left: 32, right: 32, bottom: 24,
     backgroundColor: colors.bgCard,
     borderRadius: 28, borderWidth: 1, borderColor: colors.border,
     padding: 6,

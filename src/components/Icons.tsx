@@ -119,6 +119,13 @@ export const IconFilter = ({ size = 14, color = 'currentColor' }: P) => (
   </Svg>
 );
 
+export const IconInfo = ({ size = 16, color = '#000' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <Path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13z" stroke={color} strokeWidth={1.4}/>
+    <Path d="M8 7.25v4M8 5.25v.5" stroke={color} strokeWidth={1.6} strokeLinecap="round"/>
+  </Svg>
+);
+
 // Convenience map
 export const TabIcon = {
   Home: IconHomeTab, Assignments: IconWriteTab, Report: IconProgressTab, Profile: IconProfileTab,

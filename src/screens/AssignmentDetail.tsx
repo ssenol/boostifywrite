@@ -1,6 +1,6 @@
 // 03 · Assignment Detail — gerçek exercise parametresiyle çalışır
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Image, Pressable, ScrollView, LayoutAnimation, Platform, UIManager, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -12,13 +12,14 @@ import IconButton from '@/components/IconButton';
 import LevelBadge from '@/components/LevelBadge';
 import Button from '@/components/Button';
 import StatTile from '@/components/StatTile';
-import {IconChevLeft, IconArrow, IconChevRight} from '@/components/Icons';
+import BottomSheet from '@/components/BottomSheet';
+import { IconChevLeft, IconChevRight, IconChevDown, IconInfo } from '@/components/Icons';
 import HtmlText from '@/components/HtmlText';
 import { useAuth } from '@/context/AuthContext';
 import { generateExerciseToken, fetchTaskContent } from '@/api';
 import { colors, fonts, radii, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
-import type { ExerciseQuestion } from '@/types/api';
+import type { ExerciseQuestion, RubricCriteria } from '@/types/api';
 
 type Nav   = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'AssignmentDetail'>;
@@ -37,7 +38,15 @@ function dueBadge(dueDate: string): { label: string; color: string } {
 
 const RUBRIC_COLORS = [
   colors.rubricTask, colors.rubricCohesion, colors.rubricLexical, colors.rubricGrammar,
+  colors.brandBlue,
 ];
+
+// Score seviyesi için renk — en yüksekten en düşüğe
+const LEVEL_COLORS = ['#16A34A', '#65A30D', '#CA8A04', '#EA580C', '#DC2626'];
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function AssignmentDetail() {
   const nav      = useNavigation<Nav>();
@@ -48,10 +57,18 @@ export default function AssignmentDetail() {
   const due  = dueBadge(ex.dueDate);
 
   const insets = useSafeAreaInsets();
-  const [starting,  setStarting]  = useState(false);
-  const [token,     setToken]     = useState<string | null>(null);
-  const [question,  setQuestion]  = useState<ExerciseQuestion | null>(null);
-  const [loadingQ,  setLoadingQ]  = useState(true);
+  const [starting,        setStarting]        = useState(false);
+  const [token,           setToken]           = useState<string | null>(null);
+  const [question,        setQuestion]        = useState<ExerciseQuestion | null>(null);
+  const [loadingQ,        setLoadingQ]        = useState(true);
+  const [imageSheetOpen,    setImageSheetOpen]    = useState(false);
+  const [rubricSheetOpen,   setRubricSheetOpen]   = useState(false);
+  const [activeRubricIndex, setActiveRubricIndex] = useState<number | null>(0);
+
+  const toggleRubric = (i: number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setActiveRubricIndex(prev => (prev === i ? null : i));
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -135,6 +152,34 @@ export default function AssignmentDetail() {
             <StatTile label="ATTEMPTS" value={String(ex.remainingAttemptCount)}/>
           </View>
 
+          {/* Prompt */}
+          {(loadingQ || question) && (
+            <Card padding={16}>
+              <Text style={[type.label, { marginBottom: 10 }]}>PROMPT</Text>
+              {loadingQ ? (
+                <ActivityIndicator color={colors.brandBlue}/>
+              ) : (
+                <>
+                  {question?.mediaFiles.length ? (
+                    <Pressable onPress={() => setImageSheetOpen(true)} style={styles.promptThumbContainer}>
+                      <Image
+                          source={{ uri: question.mediaFiles[0].url }}
+                          style={styles.promptThumb}
+                          resizeMode="contain"
+                      />
+                    </Pressable>
+                  ) : null}
+                  <View style={question?.mediaFiles.length ? { marginTop: 10 } : undefined}>
+                    <HtmlText
+                        html={question?.question.questionContent ?? ''}
+                        style={styles.promptText}
+                    />
+                  </View>
+                </>
+              )}
+            </Card>
+          )}
+
           {meta.outlines && meta.outlines.length > 0 && (
             <Card padding={16}>
               <Text style={[type.label, { marginBottom: 4 }]}>WRITING OUTLINE</Text>
@@ -150,46 +195,27 @@ export default function AssignmentDetail() {
             </Card>
           )}
 
-          {/* Prompt */}
-          {(loadingQ || question) && (
-            <Card padding={16}>
-              <Text style={[type.label, { marginBottom: 10 }]}>PROMPT</Text>
-              {loadingQ ? (
-                <ActivityIndicator color={colors.brandBlue}/>
-              ) : (
-                <>
-                  {(question?.mediaFiles ?? []).length > 0 && (
-                    <Image
-                      source={{ uri: question!.mediaFiles[0] }}
-                      style={styles.promptImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  <HtmlText
-                    html={question?.question.questionContent ?? ''}
-                    style={styles.promptText}
-                  />
-                </>
-              )}
-            </Card>
-          )}
-
           {keywords.length > 0 && (
-              <Card padding={16}>
-                <Text style={[type.label, { marginBottom: 12 }]}>KEYWORDS</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {keywords.map(k => (
-                      <View key={k} style={styles.keyword}>
-                        <Text style={styles.keywordText}>{k}</Text>
-                      </View>
-                  ))}
-                </View>
-              </Card>
+            <Card padding={16}>
+              <Text style={[type.label, { marginBottom: 12 }]}>KEYWORDS</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {keywords.map(k => (
+                  <View key={k} style={styles.keyword}>
+                    <Text style={styles.keywordText}>{k}</Text>
+                  </View>
+                ))}
+              </View>
+            </Card>
           )}
 
           {rubricCriteria.length > 0 && (
             <Card padding={16}>
-              <Text style={[type.label, { marginBottom: 12 }]}>YOU'LL BE GRADED ON</Text>
+              <View style={styles.rubricHeader}>
+                <Text style={type.label}>YOU'LL BE GRADED ON</Text>
+                <Pressable onPress={() => setRubricSheetOpen(true)} hitSlop={10}>
+                  <IconInfo size={15} color={colors.info}/>
+                </Pressable>
+              </View>
               {rubricCriteria.map((c, i) => (
                 <GradedRow
                   key={c.name}
@@ -214,9 +240,43 @@ export default function AssignmentDetail() {
           </Button>
         )}
       </View>
+
+      {/* Görsel detay sheet */}
+      <BottomSheet visible={imageSheetOpen} onClose={() => setImageSheetOpen(false)}>
+        <Image
+            source={{ uri: question?.mediaFiles[0]?.url }}
+            style={styles.sheetImage}
+            resizeMode="contain"
+        />
+        {question?.mediaFiles[0]?.transcript ? (
+          <ScrollView style={{ marginTop: 16, marginBottom: 8 }} showsVerticalScrollIndicator={false}>
+            <HtmlText html={question.mediaFiles[0].transcript} style={styles.sheetTranscript}/>
+          </ScrollView>
+        ) : null}
+      </BottomSheet>
+
+      {/* Rubric bilgi sheet */}
+      <BottomSheet visible={rubricSheetOpen} onClose={() => setRubricSheetOpen(false)}>
+        <Text style={styles.sheetTitle}>Grading Criteria</Text>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ marginBottom: 8 }}>
+          {rubricCriteria.map((c, i) => (
+            <RubricBlock
+              key={c.name}
+              criteria={c}
+              color={RUBRIC_COLORS[i % RUBRIC_COLORS.length]}
+              levelColors={LEVEL_COLORS}
+              isOpen={activeRubricIndex === i}
+              onToggle={() => toggleRubric(i)}
+              last={i === rubricCriteria.length - 1}
+            />
+          ))}
+        </ScrollView>
+      </BottomSheet>
     </ScreenSurface>
   );
 }
+
+// ── Sub-components ─────────────────────────────────────────
 
 function StructureRow({
   para, text, purpose, last,
@@ -244,6 +304,50 @@ function GradedRow({
   );
 }
 
+function RubricBlock({
+  criteria: c, color, levelColors, isOpen, onToggle, last,
+}: {
+  criteria: RubricCriteria; color: string; levelColors: string[];
+  isOpen: boolean; onToggle: () => void; last?: boolean;
+}) {
+  return (
+    <View style={[styles.rubricBlock, !last && styles.rubricBlockDivider]}>
+      <Pressable style={styles.rubricBlockHeader} onPress={onToggle}>
+        <View style={[styles.gradedDot, { backgroundColor: color, width: 10, height: 10 }]}/>
+        <Text style={styles.rubricBlockName}>{c.name}</Text>
+        <Text style={styles.rubricBlockWeight}>{Math.round(c.weight)}%</Text>
+        <View style={{ transform: [{ rotate: isOpen ? '180deg' : '0deg' }] }}>
+          <IconChevDown size={14} color={colors.textTertiary}/>
+        </View>
+      </Pressable>
+
+      {isOpen && (
+        <View style={{ paddingBottom: 4 }}>
+          {c.description ? (
+            <Text style={styles.rubricBlockDesc}>{c.description}</Text>
+          ) : null}
+          <View style={styles.rubricLevels}>
+            {c.categoryLevels.map((lvl, i) => (
+              <View key={lvl.result_title} style={styles.rubricLevel}>
+                <View style={styles.rubricLevelHeader}>
+                  <View style={[styles.rubricLevelDot, { backgroundColor: levelColors[i % levelColors.length] }]}/>
+                  <Text style={styles.rubricLevelTitle}>{lvl.result_title}</Text>
+                  <Text style={styles.rubricLevelScore}>
+                    {lvl.start_score === lvl.end_score ? `${lvl.start_score}` : `${lvl.start_score}–${lvl.end_score}`} pts
+                  </Text>
+                </View>
+                <Text style={styles.rubricLevelExplain}>{lvl.result_explanation}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Styles ──────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   header: {
     padding: 20, paddingTop: 12, paddingBottom: 14,
@@ -257,18 +361,27 @@ const styles = StyleSheet.create({
   title:    { fontFamily: fonts.sansSb, fontSize: 28, lineHeight: 32, letterSpacing: -0.4, color: colors.textPrimary },
   assigned: { fontFamily: fonts.sans, fontSize: 13, color: colors.textSecondary, marginTop: 6 },
 
-  structRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: 0, paddingVertical: 11 },
+  structRow:     { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 11 },
   structDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline, borderStyle: 'dashed' },
   structPara:    { fontFamily: fonts.monoSb, fontSize: 14, color: colors.brandBlue, width: 20, paddingTop: 2 },
   structText:    { fontFamily: fonts.sans, fontSize: 14, color: colors.textPrimary },
   structPurpose: { fontFamily: fonts.sans, fontSize: 11, color: colors.textTertiary, marginTop: 2 },
+
+  rubricHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
 
   gradedRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   gradedDot:   { width: 8, height: 8, borderRadius: 99 },
   gradedLabel: { flex: 1, fontFamily: fonts.sansSb, fontSize: 14, color: colors.textPrimary },
   gradedPct:   { fontFamily: fonts.mono, fontSize: 14, color: colors.textTertiary },
 
-  promptImage: { width: '100%', height: 180, borderRadius: radii.md, marginBottom: 12 },
+  promptThumbContainer: {
+    height: 130, borderRadius: radii.md,
+    borderWidth: 1, borderColor: colors.hairline,
+    overflow: 'hidden', paddingHorizontal: 12,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.bgApp,
+  },
+  promptThumb: { width: '100%', height: 120 },
   promptText:  { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.textPrimary },
 
   keyword:     { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill, backgroundColor: colors.brandBlueSoft },
@@ -282,4 +395,26 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -3 }, elevation: 4,
     paddingHorizontal: 28, paddingTop: 14, paddingBottom: 24,
   },
+
+  // Image sheet
+  sheetImage:      { width: '100%', height: 220, borderRadius: radii.md },
+  sheetTranscript: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.textSecondary },
+
+  // Rubric sheet
+  sheetTitle: { fontFamily: fonts.sansSb, fontSize: 18, color: colors.textPrimary, marginBottom: 16 },
+
+  rubricBlock:        {},
+  rubricBlockDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline },
+  rubricBlockHeader:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 14 },
+  rubricBlockName:    { flex: 1, fontFamily: fonts.sansSb, fontSize: 14, color: colors.textPrimary },
+  rubricBlockWeight:  { fontFamily: fonts.mono, fontSize: 13, color: colors.textTertiary },
+  rubricBlockDesc:    { fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: colors.textSecondary, marginBottom: 10 },
+
+  rubricLevels:      { gap: 8 },
+  rubricLevel:       { backgroundColor: colors.bgApp, borderRadius: radii.sm, padding: 10 },
+  rubricLevelHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  rubricLevelDot:    { width: 6, height: 6, borderRadius: 99 },
+  rubricLevelTitle:  { flex: 1, fontFamily: fonts.sansSb, fontSize: 12, color: colors.textPrimary },
+  rubricLevelScore:  { fontFamily: fonts.mono, fontSize: 11, color: colors.textTertiary },
+  rubricLevelExplain:{ fontFamily: fonts.sans, fontSize: 12, lineHeight: 17, color: colors.textSecondary },
 });

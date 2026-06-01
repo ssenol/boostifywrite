@@ -18,16 +18,23 @@ const styles = StyleSheet.create({
   box: {
     flex: 1,
     backgroundColor: colors.bgCard,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radii.md,
-    paddingVertical: 10, paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   label: {
-    fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1.4,
-    textTransform: 'uppercase', color: colors.textSecondary,
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   value: {
-    fontFamily: fonts.monoSb, fontSize: 15, color: colors.textPrimary,
+    fontFamily: fonts.monoSb,
+    fontSize: 15,
+    color: colors.textPrimary,
   },
 });

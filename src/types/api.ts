@@ -131,8 +131,21 @@ export type ExerciseTokenResponse = {
 };
 
 // ── Görev İçeriği (2.3) ───────────────────────────────────
+export type MediaFile = {
+  id: string;
+  name: string;
+  orginalName: string;
+  size: number;
+  type: string;
+  isLoaded: boolean;
+  url: string;
+  isPublic: boolean;
+  referenceText: string;
+  transcript: string;
+};
+
 export type ExerciseQuestion = {
-  mediaFiles: string[];
+  mediaFiles: MediaFile[];
   question: { questionContent: string };
   expectation: WritingMeta['details'];
 };
