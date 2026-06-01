@@ -8,9 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ScreenSurface } from '@/components/Screen';
-import Card from '@/components/Card';
-import LevelBadge from '@/components/LevelBadge';
-import ProgressBar from '@/components/ProgressBar';
+import AssignmentCard from '@/components/AssignmentCard';
 import { IconCheck, IconFilter } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAssignedTasks } from '@/api';
@@ -21,16 +19,6 @@ import type { AssignedExercise } from '@/types/api';
 type Nav = NativeStackNavigationProp<AssignmentsStackParamList, 'AllTasks'>;
 
 type Filters = { level: string[]; genre: string[] };
-
-function formatDue(dueDate: string): { label: string; isToday: boolean; isOverdue: boolean } {
-  const due = new Date(dueDate);
-  const now = new Date();
-  const diffDays = Math.ceil((due.getTime() - now.getTime()) / 86400000);
-  if (diffDays < 0)   return { label: `Overdue · ${Math.abs(diffDays)}d`, isToday: false, isOverdue: true };
-  if (diffDays === 0) return { label: 'Due today', isToday: true, isOverdue: false };
-  if (diffDays === 1) return { label: 'Due tomorrow', isToday: false, isOverdue: false };
-  return { label: `Due in ${diffDays}d`, isToday: false, isOverdue: false };
-}
 
 export default function AllTasks() {
   const nav    = useNavigation<Nav>();
@@ -94,7 +82,7 @@ export default function AllTasks() {
       <View style={styles.header}>
         <View>
           <Text style={type.label}>ALL ASSIGNMENTS · {filtered.length}</Text>
-          <Text style={styles.title}>Your tasks</Text>
+          <Text style={styles.title}>Your Tasks</Text>
         </View>
         <Pressable
           onPress={() => setShowFilter(true)}
@@ -111,7 +99,7 @@ export default function AllTasks() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 110, gap: 8 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 110, gap: 8 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.brandBlue}/>
         }
@@ -127,11 +115,7 @@ export default function AllTasks() {
           </View>
         ) : (
           filtered.map(ex => (
-            <TaskRow
-              key={ex.id}
-              exercise={ex}
-              onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}
-            />
+            <AssignmentCard key={ex.id} exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
           ))
         )}
       </ScrollView>
@@ -145,41 +129,6 @@ export default function AllTasks() {
         onClose={() => setShowFilter(false)}
       />
     </ScreenSurface>
-  );
-}
-
-// ── Task row ─────────────────────────────────────────────────
-function TaskRow({ exercise: ex, onPress }: { exercise: AssignedExercise; onPress: () => void }) {
-  const meta = ex.assignmentMetaData.details;
-  const due  = formatDue(ex.dueDate);
-
-  return (
-    <Card accent={colors.rubricTask} padding={14} onPress={onPress}>
-      <View style={{ marginLeft: 6 }}>
-        <View style={styles.chipsRow}>
-          <LevelBadge level={meta.cefrLevel} size="sm"/>
-          {meta.writingGenre && <Text style={styles.chipType}>{meta.writingGenre}</Text>}
-          {meta.minWordCount && (
-            <>
-              <Text style={styles.chipDot}>·</Text>
-              <Text style={styles.chipLen}>
-                {meta.minWordCount}{meta.maxWordCount ? `–${meta.maxWordCount}` : '+'}w
-              </Text>
-            </>
-          )}
-          <Text style={[styles.dueText, {
-            marginLeft: 'auto',
-            color: due.isOverdue ? colors.danger : due.isToday ? colors.brandBlue : colors.textSecondary,
-          }]}>{due.label}</Text>
-        </View>
-        <Text style={styles.taskTitle}>{ex.name}</Text>
-        <View style={styles.bottomRow}>
-          <Text style={[styles.subText, { color: colors.textTertiary }]}>
-            {ex.remainingAttemptCount} attempt{ex.remainingAttemptCount !== 1 ? 's' : ''} left
-          </Text>
-        </View>
-      </View>
-    </Card>
   );
 }
 
@@ -293,15 +242,6 @@ const styles = StyleSheet.create({
   filterBtnLabel:    { fontFamily: fonts.sansSb, fontSize: 13, color: colors.textPrimary },
   filterBadge:       { minWidth: 18, height: 18, paddingHorizontal: 5, backgroundColor: '#fff', borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   filterBadgeText:   { fontFamily: fonts.sansSb, fontSize: 11, color: colors.brandBlue },
-
-  chipsRow: { flexDirection: 'row', alignItems: 'center', columnGap: 10, rowGap: 8, flexWrap: 'wrap' },
-  chipType: { fontFamily: fonts.sans, fontSize: 14, color: colors.textSecondary },
-  chipDot:  { color: colors.textTertiary },
-  chipLen:  { fontFamily: fonts.mono, fontSize: 13, color: colors.textSecondary },
-  dueText:  { fontFamily: fonts.monoSb, fontSize: 12, letterSpacing: 0.4 },
-  taskTitle:{ marginTop: 12, fontFamily: fonts.sansSb, fontSize: 17, letterSpacing: -0.3, lineHeight: 22, color: colors.textPrimary },
-  bottomRow:{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 14 },
-  subText:  { fontFamily: fonts.monoSb, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase' },
 
   errorBox:  { backgroundColor: colors.dangerSoft, borderRadius: radii.md, padding: 14 },
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.danger },

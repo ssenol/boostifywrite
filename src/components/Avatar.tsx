@@ -1,15 +1,17 @@
 // Avatar — yazar baş harfleri yuvarlak içinde.
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors, fonts } from '@/theme';
 
-type Props = { initials?: string; size?: number };
+type Props = { initials?: string; size?: number; onPress?: () => void };
 
-export default function Avatar({ initials = 'EY', size = 40 }: Props) {
+export default function Avatar({ initials = 'XY', size = 40, onPress }: Props) {
   return (
-    <View style={[styles.box, { width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={[styles.text, { fontSize: Math.round(size * 0.33) }]}>{initials}</Text>
-    </View>
+    <Pressable onPress={onPress} style={{ borderRadius: size / 2 }}>
+      <View style={[styles.box, { width: size, height: size, borderRadius: size / 2 }]}>
+        <Text style={[styles.text, { fontSize: Math.round(size * 0.33) }]}>{initials}</Text>
+      </View>
+    </Pressable>
   );
 }
 
