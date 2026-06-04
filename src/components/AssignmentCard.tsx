@@ -40,11 +40,6 @@ export default function AssignmentCard({ exercise: ex, onPress }: Props) {
           }]}>{due.label}</Text>
         </View>
         <Text style={styles.title}>{ex.name}</Text>
-        <View style={styles.bottomRow}>
-          <Text style={styles.attempts}>
-            {ex.remainingAttemptCount} attempt{ex.remainingAttemptCount !== 1 ? 's' : ''} left
-          </Text>
-        </View>
       </View>
     </Card>
   );
@@ -57,6 +52,4 @@ const styles = StyleSheet.create({
   chipLen:  { fontFamily: fonts.mono,   fontSize: 13, color: colors.textSecondary },
   dueText:  { fontFamily: fonts.monoSb, fontSize: 12, letterSpacing: 0.4 },
   title:    { marginTop: 12, fontFamily: fonts.sansSb, fontSize: 17, letterSpacing: -0.3, lineHeight: 22, color: colors.textPrimary },
-  bottomRow:{ marginTop: 10, flexDirection: 'row', alignItems: 'center' },
-  attempts: { fontFamily: fonts.monoSb, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', color: colors.textTertiary },
 });

@@ -149,7 +149,6 @@ export default function AssignmentDetail() {
             {ex.assignmentTimeLimit > 0 && (
               <StatTile label="TIME" value={`${ex.assignmentTimeLimit}min`}/>
             )}
-            <StatTile label="ATTEMPTS" value={String(ex.remainingAttemptCount)}/>
           </View>
 
           {/* Prompt */}

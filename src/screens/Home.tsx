@@ -125,10 +125,7 @@ export default function Home() {
                         </Text>
                       </View>
                       {latest && (
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={styles.completedScore}>{latest.mainScore}/100</Text>
-                          <Text style={styles.completedAttempts}>Attempt {latest.attemptNumber}</Text>
-                        </View>
+                        <Text style={styles.completedScore}>{latest.mainScore}/100</Text>
                       )}
                     </View>
                   </Card>
@@ -162,7 +159,6 @@ const styles = StyleSheet.create({
   completedTitle: { fontFamily: fonts.sansSb, fontSize: 16, color: colors.textPrimary, letterSpacing: -0.2 },
   completedWhen:  { fontFamily: fonts.mono, fontSize: 12, color: colors.textTertiary, marginTop: 2 },
   completedScore: { fontFamily: fonts.monoSb, fontSize: 14, color: colors.textPrimary },
-  completedAttempts: { fontFamily: fonts.mono, fontSize: 11, color: colors.textTertiary },
 
   errorBox:  { backgroundColor: colors.dangerSoft, borderRadius: radii.md, padding: 14, marginBottom: 16 },
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.danger },
