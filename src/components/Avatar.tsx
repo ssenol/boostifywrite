@@ -5,7 +5,7 @@ import { colors, fonts } from '@/theme';
 
 type Props = { initials?: string; size?: number; onPress?: () => void };
 
-export default function Avatar({ initials = 'XY', size = 40, onPress }: Props) {
+export default function Avatar({ initials = 'XY', size = 52, onPress }: Props) {
   return (
     <Pressable onPress={onPress} style={{ borderRadius: size / 2 }}>
       <View style={[styles.box, { width: size, height: size, borderRadius: size / 2 }]}>
