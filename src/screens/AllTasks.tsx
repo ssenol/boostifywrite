@@ -9,6 +9,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ScreenSurface } from '@/components/Screen';
 import AssignmentCard from '@/components/AssignmentCard';
+import SectionHeader from '@/components/SectionHeader';
 import { IconCheck, IconFilter } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAssignedTasks } from '@/api';
@@ -19,6 +20,10 @@ import type { AssignedExercise } from '@/types/api';
 type Nav = NativeStackNavigationProp<AssignmentsStackParamList, 'AllTasks'>;
 
 type Filters = { level: string[]; genre: string[] };
+
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 export default function AllTasks() {
   const nav    = useNavigation<Nav>();
@@ -60,6 +65,13 @@ export default function AllTasks() {
     return true;
   }), [tasks, filters]);
 
+  const { overdue, active } = useMemo(() => {
+    const now = Date.now();
+    const overdueTasks = filtered.filter(t => new Date(t.dueDate).getTime() < now);
+    const activeTasks = filtered.filter(t => new Date(t.dueDate).getTime() >= now);
+    return { overdue: overdueTasks, active: activeTasks };
+  }, [filtered]);
+
   const filterCount = (filters.level.length ? 1 : 0) + (filters.genre.length ? 1 : 0);
 
   // Level ve genre seçeneklerini görevlerden çıkar
@@ -99,7 +111,7 @@ export default function AllTasks() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 110, gap: 8 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.brandBlue}/>
         }
@@ -114,9 +126,28 @@ export default function AllTasks() {
             <Text style={styles.emptyBody}>Try removing some filters.</Text>
           </View>
         ) : (
-          filtered.map(ex => (
-            <AssignmentCard key={ex.id} exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
-          ))
+          <>
+            {overdue.length > 0 && (
+              <View style={{ marginBottom: 24 }}>
+                <SectionHeader label={`OVERDUE · ${overdue.length}`}/>
+                <View style={{ gap: 8 }}>
+                  {overdue.map(ex => (
+                    <AssignmentCard key={ex.id} exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
+                  ))}
+                </View>
+              </View>
+            )}
+            {active.length > 0 && (
+              <View>
+                <SectionHeader label={`ACTIVE · ${active.length}`}/>
+                <View style={{ gap: 8 }}>
+                  {active.map(ex => (
+                    <AssignmentCard key={ex.id} exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
+                  ))}
+                </View>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -181,7 +212,7 @@ function FilterSheet({
             {availableGenres.length > 0 && (
               <FilterGroup label="TYPE">
                 {availableGenres.map(g => (
-                  <FilterOption key={g} label={g}
+                  <FilterOption key={g} label={capitalize(g)}
                     checked={local.genre.includes(g)}
                     onPress={() => toggle('genre', g)}/>
                 ))}
