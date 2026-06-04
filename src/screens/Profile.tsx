@@ -1,11 +1,12 @@
 // Profile / Settings — gerçek kullanıcı verisiyle
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, Switch, StyleSheet, Alert } from 'react-native';
 
 import { ScreenSurface, ScreenScroll } from '@/components/Screen';
 import { IconChevRight } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { colors, fonts, radii, type } from '@/theme';
+import * as Biometric from '@/utils/biometric';
 
 const SETTINGS = [
   { label: 'Privacy',        value: '' },
@@ -15,10 +16,67 @@ const SETTINGS = [
 
 export default function Profile() {
   const { user, logout } = useAuth();
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricTypes, setBiometricTypes] = useState<Biometric.BiometricType[]>([]);
 
   const initials = user
     ? `${user.name[0]}${user.lastName[0]}`.toUpperCase()
     : '?';
+
+  useEffect(() => {
+    checkBiometricAvailability();
+  }, []);
+
+  const checkBiometricAvailability = async () => {
+    const available = await Biometric.isBiometricAvailable();
+    setBiometricAvailable(available);
+    
+    if (available) {
+      const enabled = await Biometric.isBiometricEnabled();
+      setBiometricEnabled(enabled);
+      const types = await Biometric.getSupportedBiometricTypes();
+      setBiometricTypes(types);
+    }
+  };
+
+  const handleBiometricToggle = async (value: boolean) => {
+    if (value) {
+      // Biyometrik aktif etme
+      const authenticated = await Biometric.authenticateWithBiometric();
+      if (authenticated) {
+        await Biometric.setBiometricEnabled(true);
+        setBiometricEnabled(true);
+        Alert.alert(
+          'Biometric login enabled',
+          'Your credentials will be saved securely. You can now sign in using biometrics.'
+        );
+      }
+    } else {
+      // Biyometrik devre dışı bırakma
+      Alert.alert(
+        'Disable biometric login',
+        'Your saved credentials will be removed. Are you sure?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: async () => {
+              await Biometric.clearStoredCredentials();
+              setBiometricEnabled(false);
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  const getBiometricLabel = () => {
+    if (biometricTypes.includes('facial')) return 'Face ID';
+    if (biometricTypes.includes('fingerprint')) return 'Touch ID';
+    return 'Biometric login';
+  };
 
   const handleSignOut = () => {
     Alert.alert('Sign out', 'Are you sure you want to sign out?', [
@@ -57,6 +115,17 @@ export default function Profile() {
             <View style={[styles.row, styles.divider]}>
               <Text style={styles.rowLabel}>Username</Text>
               <Text style={styles.rowValue}>{user.username}</Text>
+            </View>
+          )}
+          {biometricAvailable && (
+            <View style={[styles.row, styles.divider]}>
+              <Text style={styles.rowLabel}>{getBiometricLabel()}</Text>
+              <Switch
+                value={biometricEnabled}
+                onValueChange={handleBiometricToggle}
+                trackColor={{ false: colors.border, true: colors.brandBlue }}
+                thumbColor="#fff"
+              />
             </View>
           )}
           {SETTINGS.map((r, i) => (

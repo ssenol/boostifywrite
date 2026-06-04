@@ -1,6 +1,6 @@
 // 01 · Login
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -11,6 +11,7 @@ import { IconArrow } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { colors, fonts, radii } from '@/theme';
 import type { RootStackParamList } from '@/navigation/types';
+import * as Biometric from '@/utils/biometric';
 
 export default function Login() {
   const { login } = useAuth();
@@ -18,8 +19,35 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricTypes, setBiometricTypes] = useState<Biometric.BiometricType[]>([]);
 
-  const handleLogin = async () => {
+  useEffect(() => {
+    checkBiometricAvailability();
+  }, []);
+
+  const checkBiometricAvailability = async () => {
+    const available = await Biometric.isBiometricAvailable();
+    setBiometricAvailable(available);
+    
+    if (available) {
+      const enabled = await Biometric.isBiometricEnabled();
+      setBiometricEnabled(enabled);
+      const types = await Biometric.getSupportedBiometricTypes();
+      setBiometricTypes(types);
+      
+      // Eğer biyometrik aktifse ve kayıtlı kullanıcı varsa otomatik göster
+      if (enabled) {
+        const stored = await Biometric.getStoredCredentials();
+        if (stored) {
+          setUsername(stored.username);
+        }
+      }
+    }
+  };
+
+  const handleLogin = async (saveCredentials = false) => {
     if (!username.trim() || !password.trim()) {
       Alert.alert('Missing fields', 'Please enter your username and password.');
       return;
@@ -27,6 +55,13 @@ export default function Login() {
     setLoading(true);
     try {
       await login(username.trim(), password);
+      
+      // Başarılı girişte kullanıcı bilgilerini kaydet veya güncelle
+      // Eğer biyometrik aktifse, her zaman güncel credential'ları sakla
+      if (biometricAvailable && (saveCredentials || biometricEnabled)) {
+        await Biometric.storeCredentials(username.trim(), password);
+      }
+      
       // AuthContext user state güncellenir → navigation otomatik Main'e geçer
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Could not sign in. Please try again.';
@@ -34,6 +69,39 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBiometricLogin = async () => {
+    const stored = await Biometric.getStoredCredentials();
+    if (!stored) {
+      Alert.alert('No saved credentials', 'Please sign in with your username and password first.');
+      return;
+    }
+
+    const authenticated = await Biometric.authenticateWithBiometric();
+    if (authenticated) {
+      setLoading(true);
+      try {
+        await login(stored.username, stored.password);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Could not sign in. Please try again.';
+        Alert.alert('Sign in failed', msg);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const getBiometricIcon = () => {
+    if (biometricTypes.includes('facial')) return '👤';
+    if (biometricTypes.includes('fingerprint')) return '👆';
+    return '🔐';
+  };
+
+  const getBiometricLabel = () => {
+    if (biometricTypes.includes('facial')) return 'Sign in with Face ID';
+    if (biometricTypes.includes('fingerprint')) return 'Sign in with Touch ID';
+    return 'Sign in with biometrics';
   };
 
   return (
@@ -80,10 +148,19 @@ export default function Login() {
           {loading ? (
             <ActivityIndicator color={colors.brandBlue} style={{ height: 52 }}/>
           ) : (
-            <Button kind="primary" onPress={handleLogin}
-              icon={<IconArrow size={18} color="#fff"/>}>
-              Sign in
-            </Button>
+            <>
+              <Button kind="primary" onPress={() => handleLogin(true)}
+                icon={<IconArrow size={18} color="#fff"/>}>
+                Sign in
+              </Button>
+              
+              {biometricAvailable && biometricEnabled && (
+                <Pressable onPress={handleBiometricLogin} style={styles.biometricBtn}>
+                  <Text style={styles.biometricIcon}>{getBiometricIcon()}</Text>
+                  <Text style={styles.biometricText}>{getBiometricLabel()}</Text>
+                </Pressable>
+              )}
+            </>
           )}
         </View>
 
@@ -121,5 +198,25 @@ const styles = StyleSheet.create({
     textAlign: 'center', marginBottom: 16,
     fontFamily: fonts.sansSb, fontSize: 14,
     color: colors.brandBlue,
+  },
+  biometricBtn: {
+    marginTop: 16,
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.bgCard,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+  },
+  biometricIcon: {
+    fontSize: 20,
+  },
+  biometricText: {
+    fontFamily: fonts.sansSb,
+    fontSize: 15,
+    color: colors.textPrimary,
   },
 });
