@@ -1,5 +1,5 @@
 // 02 · Home — aktif görevler + son tamamlananlar
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,9 +26,19 @@ export default function Home() {
   const [loading,   setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error,     setError]     = useState<string | null>(null);
+  const lastLoadTime = useRef<number>(0);
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 saat
 
-  const load = useCallback(async (isRefresh = false) => {
+  const load = useCallback(async (isRefresh = false, force = false) => {
     if (!user) return;
+    
+    // Cache kontrolü - force veya refresh değilse ve cache geçerliyse yükleme
+    const now = Date.now();
+    if (!force && !isRefresh && lastLoadTime.current > 0 && (now - lastLoadTime.current) < CACHE_DURATION) {
+      setLoading(false);
+      return;
+    }
+    
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
@@ -43,13 +53,14 @@ export default function Home() {
       ]);
       setTasks(tasksRes.data.exercises.slice(0, 5));
       setCompleted(reportsRes.data.exercises.slice(0, 5));
+      lastLoadTime.current = Date.now();
     } catch {
       setError('Could not load tasks. Pull down to retry.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user]);
+  }, [user, CACHE_DURATION]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -86,7 +97,7 @@ export default function Home() {
       <ScreenScroll
         contentStyle={{ padding: 16, paddingBottom: 110 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.brandBlue}/>
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true, true); }} tintColor={colors.brandBlue}/>
         }
       >
         {error ? (

@@ -1,5 +1,5 @@
 // Progress — gerçek tamamlanan raporlar + statik CEFR chart
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,21 +21,32 @@ export default function Progress() {
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error,      setError]      = useState<string | null>(null);
+  const lastLoadTime = useRef<number>(0);
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 saat
 
-  const load = useCallback(async (isRefresh = false) => {
+  const load = useCallback(async (isRefresh = false, force = false) => {
     if (!user) return;
+    
+    // Cache kontrolü
+    const now = Date.now();
+    if (!force && !isRefresh && lastLoadTime.current > 0 && (now - lastLoadTime.current) < CACHE_DURATION) {
+      setLoading(false);
+      return;
+    }
+    
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
       const res = await fetchCompletedReports({ userId: user.userId, perPageCount: 20 });
       setExercises(res.data.exercises);
+      lastLoadTime.current = Date.now();
     } catch {
       setError('Could not load reports.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user]);
+  }, [user, CACHE_DURATION]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -61,7 +72,7 @@ export default function Progress() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); load(true); }}
+            onRefresh={() => { setRefreshing(true); load(true, true); }}
             tintColor={colors.brandBlue}
           />
         }

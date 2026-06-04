@@ -1,5 +1,5 @@
 // Assignments tab — tüm aktif görevler + filter bottom sheet
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, Pressable, ScrollView, StyleSheet,
   ActivityIndicator, RefreshControl,
@@ -36,9 +36,19 @@ export default function AllTasks() {
   const [error,      setError]      = useState<string | null>(null);
   const [filters,    setFilters]    = useState<Filters>({ level: [], genre: [] });
   const [showFilter, setShowFilter] = useState(false);
+  const lastLoadTime = useRef<number>(0);
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 saat
 
-  const load = useCallback(async (isRefresh = false) => {
+  const load = useCallback(async (isRefresh = false, force = false) => {
     if (!user) return;
+    
+    // Cache kontrolü
+    const now = Date.now();
+    if (!force && !isRefresh && lastLoadTime.current > 0 && (now - lastLoadTime.current) < CACHE_DURATION) {
+      setLoading(false);
+      return;
+    }
+    
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
@@ -49,13 +59,14 @@ export default function AllTasks() {
         perPageCount: 50,
       });
       setTasks(res.data.exercises);
+      lastLoadTime.current = Date.now();
     } catch {
       setError('Could not load tasks.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user]);
+  }, [user, CACHE_DURATION]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -114,7 +125,7 @@ export default function AllTasks() {
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={colors.brandBlue}/>
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true, true); }} tintColor={colors.brandBlue}/>
         }
       >
         {error ? (
