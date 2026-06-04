@@ -32,14 +32,10 @@ export default function OnboardingWelcome() {
           </Text>
         </View>
 
-        <Button kind="primary" onPress={() => nav.navigate('OnboardingLevel')}
+        <Button kind="primary" onPress={() => nav.navigate('Login')}
           icon={<IconArrow size={18} color="#fff"/>}>
           Get started
         </Button>
-        <Text style={styles.signin}>
-          Already have an account?{' '}
-          <Text style={styles.signinLink} onPress={() => nav.navigate('Login')}>Sign in</Text>
-        </Text>
       </View>
     </ScreenSurface>
   );

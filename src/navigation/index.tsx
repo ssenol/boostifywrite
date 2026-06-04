@@ -18,7 +18,6 @@ import { useAuth }       from '@/context/AuthContext';
 import { colors }        from '@/theme';
 
 import OnboardingWelcome from '@/screens/OnboardingWelcome';
-import OnboardingLevel   from '@/screens/OnboardingLevel';
 import Login             from '@/screens/Login';
 
 import Home             from '@/screens/Home';
@@ -167,7 +166,6 @@ export default function RootNavigator() {
         ) : (
           <>
             <RootStack.Screen name="OnboardingWelcome" component={OnboardingWelcome}/>
-            <RootStack.Screen name="OnboardingLevel"   component={OnboardingLevel}/>
             <RootStack.Screen name="Login"             component={Login}/>
           </>
         )}

@@ -7,7 +7,6 @@ import type { AssignedExercise }       from '@/types/api';
 // ── Root stack ──
 export type RootStackParamList = {
   OnboardingWelcome: undefined;
-  OnboardingLevel:   undefined;
   Login:             undefined;
   Main:              undefined;
 };

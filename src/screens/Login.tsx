@@ -1,6 +1,8 @@
 // 01 · Login
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ScreenSurface } from '@/components/Screen';
 import { LogoWordmark } from '@/components/Logo';
@@ -8,9 +10,11 @@ import Button from '@/components/Button';
 import { IconArrow } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { colors, fonts, radii } from '@/theme';
+import type { RootStackParamList } from '@/navigation/types';
 
 export default function Login() {
   const { login } = useAuth();
+  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
@@ -84,6 +88,9 @@ export default function Login() {
         </View>
 
         <View style={{ flex: 1 }}/>
+        <Text style={styles.backLink} onPress={() => nav.navigate('OnboardingWelcome')}>
+          ← Back to Welcome
+        </Text>
         <Text style={styles.version}>v2.1 · CEFR A1–C1</Text>
       </View>
     </ScreenSurface>
@@ -110,6 +117,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     borderRadius: radii.md,
     fontFamily: fonts.sans, fontSize: 15, color: colors.textPrimary,
+  },
+  backLink: {
+    textAlign: 'center', marginBottom: 16,
+    fontFamily: fonts.sansSb, fontSize: 14,
+    color: colors.brandBlue,
   },
   version: {
     textAlign: 'center', marginBottom: 12,
