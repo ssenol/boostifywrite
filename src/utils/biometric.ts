@@ -16,10 +16,11 @@ export interface StoredCredentials {
  */
 export async function isBiometricAvailable(): Promise<boolean> {
   const compatible = await LocalAuthentication.hasHardwareAsync();
-  if (!compatible) return false;
+  return compatible;
   
-  const enrolled = await LocalAuthentication.isEnrolledAsync();
-  return enrolled;
+  // Not: Production'da enrolled kontrolü de yapılmalı
+  // const enrolled = await LocalAuthentication.isEnrolledAsync();
+  // return enrolled;
 }
 
 /**

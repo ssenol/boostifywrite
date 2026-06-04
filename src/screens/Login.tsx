@@ -47,18 +47,17 @@ export default function Login() {
     }
   };
 
-  const handleLogin = async (saveCredentials = false) => {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter your username and password.');
-      return;
-    }
+  const performLogin = async (enableBiometric: boolean) => {
     setLoading(true);
     try {
       await login(username.trim(), password);
       
-      // Başarılı girişte kullanıcı bilgilerini kaydet veya güncelle
-      // Eğer biyometrik aktifse, her zaman güncel credential'ları sakla
-      if (biometricAvailable && (saveCredentials || biometricEnabled)) {
+      // Başarılı girişte credential'ları kaydet
+      if (biometricAvailable && enableBiometric) {
+        await Biometric.setBiometricEnabled(true);
+        await Biometric.storeCredentials(username.trim(), password);
+      } else if (biometricAvailable && biometricEnabled) {
+        // Biyometrik aktifse, her zaman güncel credential'ları sakla
         await Biometric.storeCredentials(username.trim(), password);
       }
       
@@ -68,6 +67,40 @@ export default function Login() {
       Alert.alert('Sign in failed', msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      Alert.alert('Missing fields', 'Please enter your username and password.');
+      return;
+    }
+    
+    // İlk girişte biyometrik kullanmak isteyip istemediğini sor
+    if (biometricAvailable && !biometricEnabled) {
+      const types = await Biometric.getSupportedBiometricTypes();
+      const biometricName = types.includes('facial') ? 'Face ID' : 
+                            types.includes('fingerprint') ? 'Touch ID' : 
+                            'biometric authentication';
+      
+      Alert.alert(
+        `Enable ${biometricName}?`,
+        `Sign in faster next time using ${biometricName}. Your credentials will be stored securely on this device.`,
+        [
+          { 
+            text: 'Not now', 
+            style: 'cancel',
+            onPress: () => performLogin(false),
+          },
+          {
+            text: 'Enable',
+            onPress: () => performLogin(true),
+          },
+        ],
+        { cancelable: false }
+      );
+    } else {
+      await performLogin(false);
     }
   };
 
@@ -149,7 +182,7 @@ export default function Login() {
             <ActivityIndicator color={colors.brandBlue} style={{ height: 52 }}/>
           ) : (
             <>
-              <Button kind="primary" onPress={() => handleLogin(true)}
+              <Button kind="primary" onPress={handleLogin}
                 icon={<IconArrow size={18} color="#fff"/>}>
                 Sign in
               </Button>
