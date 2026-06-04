@@ -42,10 +42,10 @@ export default function Login() {
 
       <View style={styles.body}>
         <View style={{ marginTop: 8 }}>
-          <LogoWordmark size={32}/>
+          <LogoWordmark size={52}/>
         </View>
 
-        <View style={{ marginTop: 48 }}>
+        <View style={{ marginTop: 90 }}>
           <Text style={styles.hero}>
             Every great essay{' '}
             <Text style={styles.heroEmph}>starts with one sentence.</Text>
@@ -91,7 +91,6 @@ export default function Login() {
         <Text style={styles.backLink} onPress={() => nav.navigate('OnboardingWelcome')}>
           ← Back to Welcome
         </Text>
-        <Text style={styles.version}>v2.1 · CEFR A1–C1</Text>
       </View>
     </ScreenSurface>
   );
@@ -106,26 +105,21 @@ const styles = StyleSheet.create({
   body: { flex: 1, padding: 24 },
   hero: {
     fontFamily: fonts.sansSb, fontSize: 32, lineHeight: 36, letterSpacing: -0.6,
-    color: colors.textPrimary,
+    color: colors.textPrimary
   },
   heroEmph: { fontFamily: fonts.sansEb, color: colors.brandBlue, letterSpacing: -0.6 },
-  subtitle: { marginTop: 14, fontFamily: fonts.sans, fontSize: 15.5, color: colors.textSecondary },
+  subtitle: { marginTop: 16, fontFamily: fonts.sans, fontSize: 16, lineHeight: 24, color: colors.textSecondary },
   form:  { marginTop: 40, gap: 12 },
   input: {
     height: 52, paddingHorizontal: 18,
     backgroundColor: colors.bgCard,
     borderWidth: 1, borderColor: colors.border,
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     fontFamily: fonts.sans, fontSize: 15, color: colors.textPrimary,
   },
   backLink: {
     textAlign: 'center', marginBottom: 16,
     fontFamily: fonts.sansSb, fontSize: 14,
     color: colors.brandBlue,
-  },
-  version: {
-    textAlign: 'center', marginBottom: 12,
-    fontFamily: fonts.mono, fontSize: 12,
-    color: colors.textTertiary, letterSpacing: 1,
   },
 });

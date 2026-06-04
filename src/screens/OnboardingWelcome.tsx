@@ -19,7 +19,7 @@ export default function OnboardingWelcome() {
       <View style={styles.blob}/>
 
       <View style={styles.body}>
-        <LogoMark size={48}/>
+        <LogoMark size={64}/>
 
         <View style={styles.hero}>
           <Text style={type.label}>WELCOME</Text>
@@ -34,7 +34,7 @@ export default function OnboardingWelcome() {
 
         <Button kind="primary" onPress={() => nav.navigate('Login')}
           icon={<IconArrow size={18} color="#fff"/>}>
-          Get started
+          Get Started
         </Button>
       </View>
     </ScreenSurface>
@@ -47,11 +47,11 @@ const styles = StyleSheet.create({
     width: 220, height: 220, borderRadius: 110,
     backgroundColor: colors.brandCream, opacity: 0.9,
   },
-  body: { flex: 1, padding: 28, paddingTop: 24, paddingBottom: 32 },
-  hero: { flex: 1, justifyContent: 'center', marginTop: -40 },
+  body: { flex: 1, padding: 28, paddingTop: 32, paddingBottom: 32 },
+  hero: { flex: 1, justifyContent: 'center', marginTop: -100 },
   title: {
     marginTop: 12,
-    fontFamily: fonts.sansSb, fontSize: 36, lineHeight: 40, letterSpacing: -0.7,
+    fontFamily: fonts.sansSb, fontSize: 32, lineHeight: 36, letterSpacing: -0.7,
     color: colors.textPrimary,
   },
   emphBlue:  { fontFamily: fonts.sansEb, color: colors.brandBlue },
