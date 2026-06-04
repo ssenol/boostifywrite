@@ -147,10 +147,10 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 20, paddingVertical: 16,
+    paddingHorizontal: 16, paddingVertical: 16,
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1, borderBottomColor: colors.hairline,
-    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   greeting: { fontFamily: fonts.sansSb, fontSize: 26, letterSpacing: -0.5, color: colors.textPrimary },
 

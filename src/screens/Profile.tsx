@@ -34,7 +34,7 @@ export default function Profile() {
         <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
-      <ScreenScroll contentStyle={{ padding: 20, paddingBottom: 110 }}>
+      <ScreenScroll contentStyle={{ padding: 16, paddingBottom: 110 }}>
         {/* Kimlik */}
         <View style={styles.identity}>
           <View style={styles.avatar}>
@@ -83,7 +83,7 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 20, paddingVertical: 16,
+    paddingHorizontal: 16, paddingVertical: 16,
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1, borderBottomColor: colors.hairline,
   },

@@ -65,7 +65,7 @@ export default function Progress() {
       </View>
 
       <ScreenScroll
-        contentStyle={{ padding: 20, paddingBottom: 110 }}
+        contentStyle={{ padding: 16, paddingBottom: 110 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -130,7 +130,7 @@ export default function Progress() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 20, paddingVertical: 14, paddingBottom: 18,
+    paddingHorizontal: 16, paddingVertical: 16,
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1, borderBottomColor: colors.hairline,
   },

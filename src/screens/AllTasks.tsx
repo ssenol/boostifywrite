@@ -225,10 +225,10 @@ function FilterOption({ label, checked, onPress }: { label: string; checked: boo
 
 const styles = StyleSheet.create({
   header: {
-    padding: 20, paddingTop: 18, paddingBottom: 16,
+    paddingHorizontal: 16, paddingVertical: 16,
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1, borderBottomColor: colors.hairline,
-    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   title: { fontFamily: fonts.sansSb, fontSize: 26, letterSpacing: -0.3, marginTop: 4 },
 
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   emptyBody: { fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary },
 
   overlay: { flex: 1, backgroundColor: 'rgba(14,17,22,0.4)', justifyContent: 'flex-end' },
-  sheet:   { backgroundColor: colors.bgCard, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingHorizontal: 20, paddingBottom: 28, maxHeight: '85%' },
+  sheet:   { backgroundColor: colors.bgCard, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingHorizontal: 16, paddingBottom: 28, maxHeight: '85%' },
   handle:  { width: 40, height: 4, borderRadius: 99, backgroundColor: colors.borderStrong, alignSelf: 'center', marginVertical: 12 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
   sheetTitle:  { fontFamily: fonts.sansSb, fontSize: 22, letterSpacing: -0.3, flex: 1 },
