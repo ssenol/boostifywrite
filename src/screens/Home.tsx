@@ -5,8 +5,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ScreenSurface, ScreenScroll } from '@/components/Screen';
-import Card from '@/components/Card';
 import AssignmentCard from '@/components/AssignmentCard';
+import CompletedTaskCard from '@/components/CompletedTaskCard';
 import SectionHeader from '@/components/SectionHeader';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/context/AuthContext';
@@ -98,7 +98,10 @@ export default function Home() {
         {/* Aktif görevler */}
         {tasks.length > 0 && (
           <View style={{ marginTop: 8 }}>
-            <SectionHeader label={`ACTIVE · ${tasks.length}`}/>
+            <SectionHeader 
+              label="ACTIVE"
+              onViewAll={() => (nav.getParent() as any)?.navigate('AssignmentsStack', { screen: 'AllTasks' })}
+            />
             <View style={{ gap: 8 }}>
               {tasks.map(ex => (
                 <AssignmentCard key={ex.id} exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
@@ -110,25 +113,22 @@ export default function Home() {
         {/* Tamamlananlar */}
         {completed.length > 0 && (
           <View style={{ marginTop: 24 }}>
-            <SectionHeader label="COMPLETED"/>
+            <SectionHeader 
+              label="COMPLETED"
+              onViewAll={() => (nav.getParent() as any)?.navigate('ReportStack', { screen: 'Progress' })}
+            />
             <View style={{ gap: 8 }}>
               {completed.map(c => {
-                const latest = c.attempts[0];
+                const bestAttempt = c.attempts[0];
                 return (
-                  <Card key={c.assignedTaskId} padding={16}>
-                    <View style={styles.completedRow}>
-                      <View style={[styles.dot, { backgroundColor: colors.brandGreen }]}/>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.completedTitle}>{c.taskName}</Text>
-                        <Text style={styles.completedWhen}>
-                          {new Date(c.lastSolvedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </Text>
-                      </View>
-                      {latest && (
-                        <Text style={styles.completedScore}>{latest.mainScore}/100</Text>
-                      )}
-                    </View>
-                  </Card>
+                  <CompletedTaskCard
+                    key={c.assignedTaskId}
+                    exercise={c}
+                    onPress={() => bestAttempt && (nav.getParent() as any)?.navigate('ReportStack', {
+                      screen: 'Results',
+                      params: { solvedTaskId: bestAttempt.solvedTaskId },
+                    })}
+                  />
                 );
               })}
             </View>
@@ -153,12 +153,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   greeting: { fontFamily: fonts.sansSb, fontSize: 26, letterSpacing: -0.5, color: colors.textPrimary },
-
-  completedRow:   { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dot:            { width: 8, height: 8, borderRadius: 99 },
-  completedTitle: { fontFamily: fonts.sansSb, fontSize: 16, color: colors.textPrimary, letterSpacing: -0.2 },
-  completedWhen:  { fontFamily: fonts.mono, fontSize: 12, color: colors.textTertiary, marginTop: 2 },
-  completedScore: { fontFamily: fonts.monoSb, fontSize: 14, color: colors.textPrimary },
 
   errorBox:  { backgroundColor: colors.dangerSoft, borderRadius: radii.md, padding: 14, marginBottom: 16 },
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.danger },
