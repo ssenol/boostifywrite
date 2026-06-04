@@ -1,7 +1,7 @@
 // Assignments tab — tüm aktif görevler + filter bottom sheet
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  View, Text, Pressable, ScrollView, Modal, StyleSheet,
+  View, Text, Pressable, ScrollView, StyleSheet,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenSurface } from '@/components/Screen';
 import AssignmentCard from '@/components/AssignmentCard';
 import SectionHeader from '@/components/SectionHeader';
+import BottomSheet from '@/components/BottomSheet';
 import { IconCheck, IconFilter } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAssignedTasks } from '@/api';
@@ -182,55 +183,50 @@ function FilterSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={e => e.stopPropagation()}>
-          <View style={styles.handle}/>
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Filter tasks</Text>
-            <Pressable onPress={() => setLocal({ level: [], genre: [] })} hitSlop={8}>
-              <Text style={styles.resetBtn}>Reset</Text>
-            </Pressable>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {availableLevels.length > 0 && (
-              <FilterGroup label="CEFR LEVEL">
-                <View style={styles.levelPills}>
-                  {availableLevels.map(l => {
-                    const active = local.level.includes(l);
-                    return (
-                      <Pressable key={l} onPress={() => toggle('level', l)}
-                        style={[styles.levelPill, active && styles.levelPillActive]}>
-                        <Text style={[styles.levelPillText, active && { color: '#fff' }]}>{l}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </FilterGroup>
-            )}
-            {availableGenres.length > 0 && (
-              <FilterGroup label="TYPE">
-                {availableGenres.map(g => (
-                  <FilterOption key={g} label={capitalize(g)}
-                    checked={local.genre.includes(g)}
-                    onPress={() => toggle('genre', g)}/>
-                ))}
-              </FilterGroup>
-            )}
-          </ScrollView>
-
-          <View style={styles.sheetActions}>
-            <Pressable style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </Pressable>
-            <Pressable style={styles.applyBtn} onPress={() => onApply(local)}>
-              <Text style={styles.applyBtnText}>Apply filters</Text>
-            </Pressable>
-          </View>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={styles.sheetHeader}>
+        <Text style={styles.sheetTitle}>Filter Tasks</Text>
+        <Pressable onPress={() => setLocal({ level: [], genre: [] })} hitSlop={8}>
+          <Text style={styles.resetBtn}>Reset</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
+        {availableLevels.length > 0 && (
+          <FilterGroup label="CEFR LEVEL">
+            <View style={styles.levelPills}>
+              {availableLevels.map(l => {
+                const active = local.level.includes(l);
+                return (
+                  <Pressable key={l} onPress={() => toggle('level', l)}
+                    style={[styles.levelPill, active && styles.levelPillActive]}>
+                    <Text style={[styles.levelPillText, active && { color: '#fff' }]}>{l}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </FilterGroup>
+        )}
+        {availableGenres.length > 0 && (
+          <FilterGroup label="TYPE">
+            {availableGenres.map(g => (
+              <FilterOption key={g} label={capitalize(g)}
+                checked={local.genre.includes(g)}
+                onPress={() => toggle('genre', g)}/>
+            ))}
+          </FilterGroup>
+        )}
+      </ScrollView>
+
+      <View style={styles.sheetActions}>
+        <Pressable style={styles.cancelBtn} onPress={onClose}>
+          <Text style={styles.cancelBtnText}>Cancel</Text>
+        </Pressable>
+        <Pressable style={styles.applyBtn} onPress={() => onApply(local)}>
+          <Text style={styles.applyBtnText}>Apply Filters</Text>
+        </Pressable>
+      </View>
+    </BottomSheet>
   );
 }
 
@@ -280,10 +276,7 @@ const styles = StyleSheet.create({
   emptyTitle:{ fontFamily: fonts.sansSb, fontSize: 18, marginBottom: 8 },
   emptyBody: { fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary },
 
-  overlay: { flex: 1, backgroundColor: 'rgba(14,17,22,0.4)', justifyContent: 'flex-end' },
-  sheet:   { backgroundColor: colors.bgCard, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingHorizontal: 16, paddingBottom: 28, maxHeight: '85%' },
-  handle:  { width: 40, height: 4, borderRadius: 99, backgroundColor: colors.borderStrong, alignSelf: 'center', marginVertical: 12 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, marginTop: 8 },
   sheetTitle:  { fontFamily: fonts.sansSb, fontSize: 22, letterSpacing: -0.3, flex: 1 },
   resetBtn:    { fontFamily: fonts.sansSb, fontSize: 13, color: colors.textSecondary, padding: 6 },
 
