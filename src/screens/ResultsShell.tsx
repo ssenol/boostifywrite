@@ -119,7 +119,7 @@ function ShellInner() {
         <Animated.View key={tab} entering={entering} exiting={exiting} style={{ flex: 1, overflow: 'hidden' }}>
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
             showsVerticalScrollIndicator={false}
           >
             {tab === 'Overview' && <OverviewContent onTabChange={changeTab}/>}
@@ -144,7 +144,7 @@ function ShellInner() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 20, paddingTop: 14,
+    paddingHorizontal: 16, paddingTop: 14,
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1, borderBottomColor: colors.hairline,
   },
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 6, height: 6, borderRadius: 99, backgroundColor: colors.brandGreen },
   title: { fontFamily: fonts.sansSb, fontSize: 20, color: colors.textPrimary, letterSpacing: -0.3 },
 
-  pillsRow: { paddingHorizontal: 20, paddingBottom: 14, gap: 6 },
+  pillsRow: { paddingHorizontal: 16, paddingBottom: 14, gap: 6 },
   pill: {
     paddingHorizontal: 16, paddingVertical: 9,
     borderRadius: radii.pill, borderWidth: 1,

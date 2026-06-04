@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: colors.bgCard,
     borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl,
-    paddingHorizontal: 20, paddingTop: 0,
+    paddingHorizontal: 16, paddingTop: 0,
   },
   handleArea: { alignItems: 'center', paddingVertical: 12 },
   handle:     { width: 36, height: 4, borderRadius: radii.pill, backgroundColor: colors.hairline },

@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     position: 'relative', overflow: 'hidden',
     backgroundColor: colors.bgInverse,
     borderRadius: radii.lg,
-    padding: 22, paddingTop: 20, paddingBottom: 18,
+    padding: 16, paddingTop: 16, paddingBottom: 16,
   },
   heroBlob: {
     position: 'absolute', right: -40, top: -30,

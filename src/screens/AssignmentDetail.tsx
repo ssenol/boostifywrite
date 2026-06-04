@@ -349,7 +349,7 @@ function RubricBlock({
 
 const styles = StyleSheet.create({
   header: {
-    padding: 20, paddingTop: 12, paddingBottom: 14,
+    padding: 16, paddingTop: 12, paddingBottom: 14,
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1, borderBottomColor: colors.hairline,
     flexDirection: 'row', alignItems: 'center', gap: 12,

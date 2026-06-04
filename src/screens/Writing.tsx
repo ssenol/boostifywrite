@@ -180,7 +180,7 @@ export default function Writing() {
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1, marginBottom: barBottom + barHeight + peekHeight }}
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 20, paddingBottom: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}

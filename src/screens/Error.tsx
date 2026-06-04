@@ -54,7 +54,7 @@ export default function ErrorScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    padding: 20, paddingVertical: 16,
+    padding: 16, paddingVertical: 16,
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1, borderBottomColor: colors.hairline,
     flexDirection: 'row', alignItems: 'center', gap: 8,
