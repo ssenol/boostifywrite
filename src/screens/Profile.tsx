@@ -1,6 +1,7 @@
 // Profile / Settings — gerçek kullanıcı verisiyle
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, Switch, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ScreenSurface, ScreenScroll } from '@/components/Screen';
 import { IconChevRight } from '@/components/Icons';
@@ -22,6 +23,7 @@ export default function Profile() {
   const [biometricTypes, setBiometricTypes] = useState<Biometric.BiometricType[]>([]);
   const [showDisableBiometricDialog, setShowDisableBiometricDialog] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [showResetDataDialog, setShowResetDataDialog] = useState(false);
 
   const initials = user
     ? `${user.name[0]}${user.lastName[0]}`.toUpperCase()
@@ -73,6 +75,16 @@ export default function Profile() {
     setShowSignOutDialog(true);
   };
 
+  const handleResetData = async () => {
+    // Tüm AsyncStorage verilerini temizle
+    await AsyncStorage.clear();
+    // Biyometrik credential'ları temizle
+    await Biometric.clearStoredCredentials();
+    // Logout yap
+    setShowResetDataDialog(false);
+    logout();
+  };
+
   return (
     <ScreenSurface>
       <View style={styles.header}>
@@ -81,30 +93,53 @@ export default function Profile() {
       </View>
 
       <ScreenScroll contentStyle={{ padding: 16, paddingBottom: 110 }}>
-        {/* Kimlik */}
-        <View style={styles.identity}>
+        {/* Avatar */}
+        <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name}>
-              {user ? `${user.name} ${user.lastName}` : '—'}
-            </Text>
-            <Text style={styles.school}>
-              {user?.schoolName?.toUpperCase() ?? ''}
-              {user?.campusName ? ` · ${user.campusName.toUpperCase()}` : ''}
-            </Text>
-          </View>
         </View>
 
-        {/* Ayarlar */}
-        <View style={[styles.group, { marginTop: 24 }]}>
+        {/* Kullanıcı Bilgileri */}
+        <View style={styles.group}>
+          {user && (
+            <View style={[styles.row, styles.divider]}>
+              <Text style={styles.rowLabel}>Student</Text>
+              <Text style={styles.rowValue}>{`${user.name} ${user.lastName}`}</Text>
+            </View>
+          )}
+
           {user && (
             <View style={[styles.row, styles.divider]}>
               <Text style={styles.rowLabel}>Username</Text>
               <Text style={styles.rowValue}>{user.username}</Text>
             </View>
           )}
+
+          {user?.schoolName && (
+            <View style={[styles.row, styles.divider]}>
+              <Text style={styles.rowLabel}>School</Text>
+              <Text style={styles.rowValue}>{user.schoolName}</Text>
+            </View>
+          )}
+
+          {user?.campusName && (
+            <View style={[styles.row, styles.divider]}>
+              <Text style={styles.rowLabel}>Campus</Text>
+              <Text style={styles.rowValue}>{user.campusName}</Text>
+            </View>
+          )}
+
+          {user?.className && (
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Class</Text>
+              <Text style={styles.rowValue}>{user.className}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Sistem Ayarları */}
+        <View style={[styles.group, { marginTop: 16 }]}>
           {biometricAvailable && (
             <View style={[styles.row, styles.divider]}>
               <Text style={styles.rowLabel}>{getBiometricLabel()}</Text>
@@ -132,6 +167,11 @@ export default function Profile() {
         {/* Çıkış */}
         <Pressable style={styles.signOut} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign out</Text>
+        </Pressable>
+
+        {/* Reset Data */}
+        <Pressable style={styles.resetData} onPress={() => setShowResetDataDialog(true)}>
+          <Text style={styles.resetDataText}>Reset all data</Text>
         </Pressable>
       </ScreenScroll>
 
@@ -181,6 +221,25 @@ export default function Profile() {
         ]}
         onClose={() => setShowSignOutDialog(false)}
       />
+
+      <AlertDialog
+        visible={showResetDataDialog}
+        title="Reset all data"
+        message="This will clear all app data including biometric settings, cached content, and preferences. You will be signed out. This action cannot be undone."
+        buttons={[
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => setShowResetDataDialog(false),
+          },
+          {
+            text: 'Reset',
+            style: 'destructive',
+            onPress: handleResetData,
+          },
+        ]}
+        onClose={() => setShowResetDataDialog(false)}
+      />
     </ScreenSurface>
   );
 }
@@ -193,22 +252,30 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontFamily: fonts.sansSb, fontSize: 26, letterSpacing: -0.5, color: colors.textPrimary },
 
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  avatar: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: colors.brandBlueSoft,
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  avatarText: { fontFamily: fonts.sansEb, fontSize: 22, color: colors.brandBlue },
-  name:   { fontFamily: fonts.sansSb, fontSize: 22, color: colors.textPrimary, letterSpacing: -0.3 },
-  school: { fontFamily: fonts.mono, fontSize: 11, color: colors.textTertiary, letterSpacing: 0.6, marginTop: 3 },
+  avatar: {
+    width: 88, 
+    height: 88, 
+    borderRadius: 44,
+    backgroundColor: colors.brandBlueSoft,
+    alignItems: 'center', 
+    justifyContent: 'center',
+  },
+  avatarText: { 
+    fontFamily: fonts.sansEb, 
+    fontSize: 32, 
+    color: colors.brandBlue,
+  },
 
   group: {
     backgroundColor: colors.bgCard,
     borderWidth: 1, borderColor: colors.border,
     borderRadius: radii.lg, overflow: 'hidden',
   },
+  
   row: {
     paddingHorizontal: 16, paddingVertical: 14,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -224,4 +291,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   signOutText: { fontFamily: fonts.sansSb, fontSize: 14, color: colors.danger },
+  
+  resetData: {
+    marginTop: 50,
+    alignItems: 'center',
+  },
+  resetDataText: { 
+    fontFamily: fonts.sansSb, 
+    fontSize: 13, 
+    color: colors.textTertiary,
+    textDecorationLine: 'underline',
+  },
 });

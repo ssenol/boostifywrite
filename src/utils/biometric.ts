@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BIOMETRIC_ENABLED_KEY = '@biometric_enabled';
 const STORED_CREDENTIALS_KEY = '@stored_credentials';
+const SHOULD_SHOW_BIOMETRIC_PROMPT_KEY = '@should_show_biometric_prompt';
 
 export type BiometricType = 'fingerprint' | 'facial' | 'iris' | 'none';
 
@@ -122,4 +123,23 @@ export function getBiometricPromptMessage(types: BiometricType[]): string {
     return 'Sign in with Iris';
   }
   return 'Sign in with biometrics';
+}
+
+/**
+ * Biyometrik prompt gösterilmesi gerektiğini işaretler
+ */
+export async function setShouldShowBiometricPrompt(should: boolean): Promise<void> {
+  await AsyncStorage.setItem(SHOULD_SHOW_BIOMETRIC_PROMPT_KEY, should ? 'true' : 'false');
+}
+
+/**
+ * Biyometrik prompt gösterilmesi gerekip gerekmediğini kontrol eder
+ */
+export async function shouldShowBiometricPrompt(): Promise<boolean> {
+  try {
+    const value = await AsyncStorage.getItem(SHOULD_SHOW_BIOMETRIC_PROMPT_KEY);
+    return value === 'true';
+  } catch {
+    return false;
+  }
 }

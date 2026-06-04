@@ -8,12 +8,14 @@ import { ScreenSurface, ScreenScroll } from '@/components/Screen';
 import AssignmentCard from '@/components/AssignmentCard';
 import CompletedTaskCard from '@/components/CompletedTaskCard';
 import SectionHeader from '@/components/SectionHeader';
+import AlertDialog from '@/components/AlertDialog';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAssignedTasks, fetchCompletedReports } from '@/api';
 import { colors, fonts, radii, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
 import type { AssignedExercise, CompletedExercise } from '@/types/api';
+import * as Biometric from '@/utils/biometric';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 
@@ -26,6 +28,8 @@ export default function Home() {
   const [loading,   setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error,     setError]     = useState<string | null>(null);
+  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
+  const [biometricTypes, setBiometricTypes] = useState<Biometric.BiometricType[]>([]);
   const lastLoadTime = useRef<number>(0);
   const CACHE_DURATION = 60 * 60 * 1000; // 1 saat
 
@@ -63,6 +67,43 @@ export default function Home() {
   }, [user, CACHE_DURATION]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    checkBiometricPrompt();
+  }, []);
+
+  const checkBiometricPrompt = async () => {
+    const shouldShow = await Biometric.shouldShowBiometricPrompt();
+    if (shouldShow) {
+      const types = await Biometric.getSupportedBiometricTypes();
+      setBiometricTypes(types);
+      setShowBiometricPrompt(true);
+    }
+  };
+
+  const handleEnableBiometric = async () => {
+    await Biometric.setBiometricEnabled(true);
+    await Biometric.setShouldShowBiometricPrompt(false);
+    setShowBiometricPrompt(false);
+  };
+
+  const handleDismissBiometric = async () => {
+    await Biometric.setShouldShowBiometricPrompt(false);
+    setShowBiometricPrompt(false);
+  };
+
+  const getBiometricPromptTitle = () => {
+    if (biometricTypes.includes('facial')) return 'Enable Face ID?';
+    if (biometricTypes.includes('fingerprint')) return 'Enable Touch ID?';
+    return 'Enable biometric authentication?';
+  };
+
+  const getBiometricPromptMessage = () => {
+    const name = biometricTypes.includes('facial') ? 'Face ID' : 
+                 biometricTypes.includes('fingerprint') ? 'Touch ID' : 
+                 'biometric authentication';
+    return `Sign in faster next time using ${name}. Your credentials will be stored securely on this device.`;
+  };
 
   const initials = user ? `${user.name[0]}${user.lastName[0]}`.toUpperCase() : '?';
   const firstName = user?.name ?? '';
@@ -152,6 +193,24 @@ export default function Home() {
           </View>
         )}
       </ScreenScroll>
+
+      <AlertDialog
+        visible={showBiometricPrompt}
+        title={getBiometricPromptTitle()}
+        message={getBiometricPromptMessage()}
+        buttons={[
+          {
+            text: 'Not now',
+            style: 'cancel',
+            onPress: handleDismissBiometric,
+          },
+          {
+            text: 'Enable',
+            onPress: handleEnableBiometric,
+          },
+        ]}
+        onClose={handleDismissBiometric}
+      />
     </ScreenSurface>
   );
 }

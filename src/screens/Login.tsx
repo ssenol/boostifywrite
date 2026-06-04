@@ -13,6 +13,8 @@ import { useAuth } from '@/context/AuthContext';
 import { colors, fonts, radii } from '@/theme';
 import type { RootStackParamList } from '@/navigation/types';
 import * as Biometric from '@/utils/biometric';
+import { login as apiLogin } from '@/api/auth';
+import { saveAuth } from '@/store/auth';
 
 export default function Login() {
   const { login } = useAuth();
@@ -26,6 +28,7 @@ export default function Login() {
   const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [pendingLoginData, setPendingLoginData] = useState<any>(null);
 
   useEffect(() => {
     checkBiometricAvailability();
@@ -51,21 +54,32 @@ export default function Login() {
     }
   };
 
-  const performLogin = async (enableBiometric: boolean) => {
+  const performLogin = async () => {
     setLoading(true);
     try {
-      await login(username.trim(), password);
+      // API çağrısı yap ama henüz AuthContext'e set etme
+      const res = await apiLogin(username.trim(), password);
+      if (res.data.user.role !== 'student') {
+        throw new Error('Only student accounts can sign in.');
+      }
       
-      // Başarılı girişte credential'ları kaydet
-      if (biometricAvailable && enableBiometric) {
-        await Biometric.setBiometricEnabled(true);
-        await Biometric.storeCredentials(username.trim(), password);
-      } else if (biometricAvailable && biometricEnabled) {
-        // Biyometrik aktifse, her zaman güncel credential'ları sakla
+      // Başarılı giriş - biyometrik aktifse credential'ları güncelle
+      if (biometricAvailable && biometricEnabled) {
         await Biometric.storeCredentials(username.trim(), password);
       }
       
-      // AuthContext user state güncellenir → navigation otomatik Main'e geçer
+      // Başarılı giriş sonrası biyometrik prompt göster
+      if (biometricAvailable && !biometricEnabled) {
+        await Biometric.storeCredentials(username.trim(), password);
+        setPendingLoginData({ res, username: username.trim(), password });
+        setShowBiometricPrompt(true);
+        setLoading(false);
+        return; // Prompt gösterilene kadar navigation'u engelle
+      }
+      
+      // Biyometrik prompt yoksa direkt login yap
+      await saveAuth(res.data.token, res.data.refreshToken, res.data.user);
+      await login(username.trim(), password);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Could not sign in. Please try again.';
       setErrorMessage(msg);
@@ -82,11 +96,31 @@ export default function Login() {
       return;
     }
     
-    // İlk girişte biyometrik kullanmak isteyip istemediğini sor
-    if (biometricAvailable && !biometricEnabled) {
-      setShowBiometricPrompt(true);
-    } else {
-      await performLogin(false);
+    await performLogin();
+  };
+
+  const handleEnableBiometric = async () => {
+    await Biometric.setBiometricEnabled(true);
+    setShowBiometricPrompt(false);
+    
+    // Pending login'i tamamla
+    if (pendingLoginData) {
+      const { res } = pendingLoginData;
+      await saveAuth(res.data.token, res.data.refreshToken, res.data.user);
+      await login(pendingLoginData.username, pendingLoginData.password);
+      setPendingLoginData(null);
+    }
+  };
+
+  const handleDismissBiometric = async () => {
+    setShowBiometricPrompt(false);
+    
+    // Pending login'i tamamla
+    if (pendingLoginData) {
+      const { res } = pendingLoginData;
+      await saveAuth(res.data.token, res.data.refreshToken, res.data.user);
+      await login(pendingLoginData.username, pendingLoginData.password);
+      setPendingLoginData(null);
     }
   };
 
@@ -214,20 +248,14 @@ export default function Login() {
           {
             text: 'Not now',
             style: 'cancel',
-            onPress: () => {
-              setShowBiometricPrompt(false);
-              performLogin(false);
-            },
+            onPress: handleDismissBiometric,
           },
           {
             text: 'Enable',
-            onPress: () => {
-              setShowBiometricPrompt(false);
-              performLogin(true);
-            },
+            onPress: handleEnableBiometric,
           },
         ]}
-        onClose={() => setShowBiometricPrompt(false)}
+        onClose={handleDismissBiometric}
       />
 
       <AlertDialog
