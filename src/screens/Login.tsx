@@ -1,12 +1,13 @@
 // 01 · Login
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ScreenSurface } from '@/components/Screen';
 import { LogoWordmark } from '@/components/Logo';
 import Button from '@/components/Button';
+import AlertDialog from '@/components/AlertDialog';
 import { IconArrow } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { colors, fonts, radii } from '@/theme';
@@ -22,6 +23,9 @@ export default function Login() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricTypes, setBiometricTypes] = useState<Biometric.BiometricType[]>([]);
+  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     checkBiometricAvailability();
@@ -64,7 +68,8 @@ export default function Login() {
       // AuthContext user state güncellenir → navigation otomatik Main'e geçer
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Could not sign in. Please try again.';
-      Alert.alert('Sign in failed', msg);
+      setErrorMessage(msg);
+      setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
@@ -72,42 +77,39 @@ export default function Login() {
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter your username and password.');
+      setErrorMessage('Please enter your username and password.');
+      setShowErrorDialog(true);
       return;
     }
     
     // İlk girişte biyometrik kullanmak isteyip istemediğini sor
     if (biometricAvailable && !biometricEnabled) {
-      const types = await Biometric.getSupportedBiometricTypes();
-      const biometricName = types.includes('facial') ? 'Face ID' : 
-                            types.includes('fingerprint') ? 'Touch ID' : 
-                            'biometric authentication';
-      
-      Alert.alert(
-        `Enable ${biometricName}?`,
-        `Sign in faster next time using ${biometricName}. Your credentials will be stored securely on this device.`,
-        [
-          { 
-            text: 'Not now', 
-            style: 'cancel',
-            onPress: () => performLogin(false),
-          },
-          {
-            text: 'Enable',
-            onPress: () => performLogin(true),
-          },
-        ],
-        { cancelable: false }
-      );
+      setShowBiometricPrompt(true);
     } else {
       await performLogin(false);
     }
   };
 
+  const getBiometricPromptTitle = () => {
+    const types = biometricTypes;
+    if (types.includes('facial')) return 'Enable Face ID?';
+    if (types.includes('fingerprint')) return 'Enable Touch ID?';
+    return 'Enable biometric authentication?';
+  };
+
+  const getBiometricPromptMessage = () => {
+    const types = biometricTypes;
+    const name = types.includes('facial') ? 'Face ID' : 
+                 types.includes('fingerprint') ? 'Touch ID' : 
+                 'biometric authentication';
+    return `Sign in faster next time using ${name}. Your credentials will be stored securely on this device.`;
+  };
+
   const handleBiometricLogin = async () => {
     const stored = await Biometric.getStoredCredentials();
     if (!stored) {
-      Alert.alert('No saved credentials', 'Please sign in with your username and password first.');
+      setErrorMessage('Please sign in with your username and password first.');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -118,7 +120,8 @@ export default function Login() {
         await login(stored.username, stored.password);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Could not sign in. Please try again.';
-        Alert.alert('Sign in failed', msg);
+        setErrorMessage(msg);
+        setShowErrorDialog(true);
       } finally {
         setLoading(false);
       }
@@ -202,6 +205,43 @@ export default function Login() {
           ← Back to Welcome
         </Text>
       </View>
+
+      <AlertDialog
+        visible={showBiometricPrompt}
+        title={getBiometricPromptTitle()}
+        message={getBiometricPromptMessage()}
+        buttons={[
+          {
+            text: 'Not now',
+            style: 'cancel',
+            onPress: () => {
+              setShowBiometricPrompt(false);
+              performLogin(false);
+            },
+          },
+          {
+            text: 'Enable',
+            onPress: () => {
+              setShowBiometricPrompt(false);
+              performLogin(true);
+            },
+          },
+        ]}
+        onClose={() => setShowBiometricPrompt(false)}
+      />
+
+      <AlertDialog
+        visible={showErrorDialog}
+        title="Sign in failed"
+        message={errorMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowErrorDialog(false),
+          },
+        ]}
+        onClose={() => setShowErrorDialog(false)}
+      />
     </ScreenSurface>
   );
 }

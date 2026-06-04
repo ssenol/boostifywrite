@@ -1,9 +1,10 @@
 // Profile / Settings — gerçek kullanıcı verisiyle
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, Switch, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, Switch, StyleSheet } from 'react-native';
 
 import { ScreenSurface, ScreenScroll } from '@/components/Screen';
 import { IconChevRight } from '@/components/Icons';
+import AlertDialog from '@/components/AlertDialog';
 import { useAuth } from '@/context/AuthContext';
 import { colors, fonts, radii, type } from '@/theme';
 import * as Biometric from '@/utils/biometric';
@@ -19,6 +20,8 @@ export default function Profile() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricTypes, setBiometricTypes] = useState<Biometric.BiometricType[]>([]);
+  const [showDisableBiometricDialog, setShowDisableBiometricDialog] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
   const initials = user
     ? `${user.name[0]}${user.lastName[0]}`.toUpperCase()
@@ -47,29 +50,17 @@ export default function Profile() {
       if (authenticated) {
         await Biometric.setBiometricEnabled(true);
         setBiometricEnabled(true);
-        Alert.alert(
-          'Biometric login enabled',
-          'Your credentials will be saved securely. You can now sign in using biometrics.'
-        );
       }
     } else {
       // Biyometrik devre dışı bırakma
-      Alert.alert(
-        'Disable biometric login',
-        'Your saved credentials will be removed. Are you sure?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Disable',
-            style: 'destructive',
-            onPress: async () => {
-              await Biometric.clearStoredCredentials();
-              setBiometricEnabled(false);
-            },
-          },
-        ]
-      );
+      setShowDisableBiometricDialog(true);
     }
+  };
+
+  const handleDisableBiometric = async () => {
+    await Biometric.clearStoredCredentials();
+    setBiometricEnabled(false);
+    setShowDisableBiometricDialog(false);
   };
 
   const getBiometricLabel = () => {
@@ -79,10 +70,7 @@ export default function Profile() {
   };
 
   const handleSignOut = () => {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: logout },
-    ]);
+    setShowSignOutDialog(true);
   };
 
   return (
@@ -146,6 +134,53 @@ export default function Profile() {
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
       </ScreenScroll>
+
+      <AlertDialog
+        visible={showDisableBiometricDialog}
+        title="Disable biometric login"
+        message="Your saved credentials will be removed. Are you sure?"
+        buttons={[
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => {
+              setShowDisableBiometricDialog(false);
+              setBiometricEnabled(true); // Switch'i geri çevir
+            },
+          },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: handleDisableBiometric,
+          },
+        ]}
+        onClose={() => {
+          setShowDisableBiometricDialog(false);
+          setBiometricEnabled(true); // Switch'i geri çevir
+        }}
+      />
+
+      <AlertDialog
+        visible={showSignOutDialog}
+        title="Sign out"
+        message="Are you sure you want to sign out?"
+        buttons={[
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => setShowSignOutDialog(false),
+          },
+          {
+            text: 'Sign out',
+            style: 'destructive',
+            onPress: () => {
+              setShowSignOutDialog(false);
+              logout();
+            },
+          },
+        ]}
+        onClose={() => setShowSignOutDialog(false)}
+      />
     </ScreenSurface>
   );
 }
