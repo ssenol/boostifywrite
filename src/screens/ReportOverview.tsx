@@ -131,9 +131,24 @@ export function OverviewContent({ onTabChange }: Props) {
           {(aiDoc?.sentences?.length ?? 0) > 0 && (
             <>
               <Text style={styles.aiSectionTitle}>Top sentences driving AI probability</Text>
+
+              {/* High Impact group header */}
+              <View style={styles.aiImpactHeader}>
+                <View style={styles.aiDotsRow}>
+                  <View style={[styles.aiDotSm, { backgroundColor: '#fff', borderColor: colors.danger }]}/>
+                  <View style={[styles.aiDotSm, { backgroundColor: colors.dangerSoft, borderColor: colors.danger }]}/>
+                  <View style={[styles.aiDotSm, { backgroundColor: colors.danger, borderColor: colors.danger }]}/>
+                </View>
+                <Text style={styles.aiImpactLabel}>High Impact</Text>
+              </View>
+
               {aiDoc!.sentences!.map((s, i) => (
                 <View key={i} style={[styles.aiSentenceRow, i < aiDoc!.sentences!.length - 1 && styles.aiSentenceDivider]}>
-                  <View style={styles.aiDot}/>
+                  <View style={styles.aiDotsRow}>
+                    <View style={[styles.aiDotSm, { backgroundColor: 'transparent', borderColor: colors.border }]}/>
+                    <View style={[styles.aiDotSm, { backgroundColor: 'transparent', borderColor: colors.border }]}/>
+                    <View style={[styles.aiDotSm, { backgroundColor: colors.danger, borderColor: colors.danger }]}/>
+                  </View>
                   <Text style={styles.aiSentenceText}>{s.sentence}</Text>
                 </View>
               ))}
@@ -461,16 +476,25 @@ const styles = StyleSheet.create({
   // AI Detection sentence list
   aiSectionTitle: {
     fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary,
-    marginBottom: 12, marginTop: 4,
+    marginBottom: 10, marginTop: 4,
+  },
+  aiImpactHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 8, marginBottom: 2,
+  },
+  aiImpactLabel: {
+    fontFamily: fonts.sansSb, fontSize: 13, color: colors.textSecondary,
+  },
+  aiDotsRow: {
+    flexDirection: 'row', gap: 3, alignItems: 'center', flexShrink: 0, marginTop: 5
+  },
+  aiDotSm: {
+    width: 9, height: 9, borderRadius: 5, borderWidth: 1.5,
   },
   aiSentenceRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 12,
   },
   aiSentenceDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline },
-  aiDot: {
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: colors.danger, marginTop: 4, flexShrink: 0,
-  },
   aiSentenceText: {
     flex: 1, fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: colors.textPrimary,
   },
