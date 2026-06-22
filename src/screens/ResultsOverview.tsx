@@ -1,155 +1,316 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 
+import BottomSheet from '@/components/BottomSheet';
 import Card from '@/components/Card';
-import RubricBar from '@/components/RubricBar';
-import HtmlText from '@/components/HtmlText';
-import { IconArrowUp, IconChevRight } from '@/components/Icons';
+import IconButton from '@/components/IconButton';
+import { IconArrow, IconArrowUp, IconArrowDown, IconInfo } from '@/components/Icons';
 import {
-  useReport, findScore, scoreToCefr, getCriteriaEntry, isInlineCorrection,
-  getGlobalFeedback, feedbackMarkdownToHtml,
+  useReport,
+  getRubricCriteriaFeedback,
+  getTargetCefrLevel, getUserResponseCefrEvidence,
 } from '@/context/ReportContext';
-import { colors, fonts, radii, type } from '@/theme';
+import { colors, fonts, radii, type, getCefrBand, CEFR_BANDS } from '@/theme';
 import type { ResultsTab } from '@/navigation/types';
 
-const DIM_CONFIG = [
-  { label: 'Task Achievement',     kw: 'task',  color: colors.rubricTask,     tab: 'Task'     as ResultsTab },
-  { label: 'Coherence & Cohesion', kw: 'coher', color: colors.rubricCohesion, tab: 'Cohesion' as ResultsTab },
-  { label: 'Lexical Range',        kw: 'lexic', color: colors.rubricLexical,  tab: 'Vocab'    as ResultsTab },
-  { label: 'Grammatical Accuracy', kw: 'gramm', color: colors.rubricGrammar,  tab: 'Grammar'  as ResultsTab },
-] as const;
+const RUBRIC_DESCRIPTIONS = [
+  {
+    title: 'Grammar & Language Use',
+    body: 'Range of sentence structures and accuracy. Looks at how often grammar errors appear and how much they affect your meaning.',
+  },
+  {
+    title: 'Vocabulary & Word Choice',
+    body: 'Range and accuracy of the words you choose. Includes collocation (which words fit together) and register (formal vs informal).',
+  },
+  {
+    title: 'Content & Task Fulfilment',
+    body: 'How fully you addressed every part of the task and developed your ideas. Word count and required keywords also feed into this.',
+  },
+  {
+    title: 'Organisation & Cohesion',
+    body: 'How clearly your paragraphs are structured, whether you covered each outline section in the right order, and how well linking words connect your ideas.',
+  },
+  {
+    title: 'Mechanics',
+    body: "Your spelling and punctuation are mostly correct, which is great. However, you have several serious logic errors: 'the morning is darker and brighter for me' is contradictory (darker AND brighter?), and 'staying home to...",
+  },
+];
 
 type Props = { onTabChange: (tab: ResultsTab) => void };
 
-// Provider içinde render edilir — useReport() burada doğru context'i bulur
+function criterionToConfig(criterion: string): { color: string; tab: ResultsTab } {
+  const c = criterion.toLowerCase();
+  if (c.includes('task') || c.includes('content') || c.includes('fulfil'))
+    return { color: colors.rubricTask, tab: 'Content & Fulfillment' };
+  if (c.includes('coher') || c.includes('cohes') || c.includes('organ'))
+    return { color: colors.rubricCohesion, tab: 'Organization & Cohesion' };
+  if (c.includes('lexic') || c.includes('vocab') || c.includes('word'))
+    return { color: colors.rubricLexical, tab: 'Vocabulary & Word Choice' };
+  if (c.includes('gramm') || c.includes('language'))
+    return { color: colors.rubricGrammar, tab: 'Grammar & Language Use' };
+  return { color: colors.borderStrong, tab: 'Overview' };
+}
+
 export function OverviewContent({ onTabChange }: Props) {
   const { report } = useReport();
+  const [rubricInfoOpen, setRubricInfoOpen] = useState(false);
   if (!report) return null;
 
-  const scores = report.criteriaScores ?? {};
+  const rubricFeedback = getRubricCriteriaFeedback(report.result);
+  const mainBand       = getCefrBand(report.mainScore);
 
-  const lever = DIM_CONFIG
-    .map(d => ({ ...d, score: findScore(scores, d.kw) }))
-    .sort((a, b) => a.score - b.score)[0];
+  const targetLevel   = getTargetCefrLevel(report.result);
+  const achievedLevel = report.cefrLevel;
+  const targetIdx     = CEFR_BANDS.findIndex(b => b.level === targetLevel);
+  const achievedIdx   = CEFR_BANDS.findIndex(b => b.level === achievedLevel);
+  const bandDiff      = (targetIdx !== -1 && achievedIdx !== -1) ? achievedIdx - targetIdx : null;
 
-  type Action = { color: string; text: string; tab: ResultsTab };
-  const actions: Action[] = [];
-  for (const d of [...DIM_CONFIG].sort((a, b) => findScore(scores, a.kw) - findScore(scores, b.kw))) {
-    if (actions.length >= 3) break;
-    const cr = getCriteriaEntry(report.result, d.kw);
-    const firstIssue = (cr?.issues ?? [])[0];
-    if (!firstIssue) continue;
-    const text = isInlineCorrection(firstIssue)
-      ? firstIssue.detailFeedbackWithReason || `${firstIssue.wrongWord} → ${firstIssue.correctWord}`
-      : firstIssue;
-    actions.push({ color: d.color, text, tab: d.tab });
-  }
+  const evidence = getUserResponseCefrEvidence(report.result);
 
   return (
     <>
+      {/* ── Hero ── */}
       <View style={styles.heroCard}>
-        <View style={styles.heroBlob}/>
+        <View style={[styles.heroBlob, { backgroundColor: mainBand.color + '35' }]}/>
         <View>
-          <Text style={[type.label, { color: colors.textInverseSoft, marginBottom: 6 }]}>OVERALL CEFR</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12 }}>
-            <Text style={styles.heroBig}>{report.cefrLevel}</Text>
-            <Text style={styles.heroScore}>{report.mainScore.toFixed(1)}/9</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={[type.label, { color: colors.textInverseSoft }]}>OVERALL SCORE</Text>
+            <Text style={[type.labelSm, { color: colors.textInverseSoft }]}>
+              {new Date(report.solvedDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
+            </Text>
           </View>
-          {lever && (
-            <View style={styles.insight}>
-              <IconArrowUp size={13} color="#fff"/>
-              <Text style={styles.insightText}>{lever.label} is your biggest lever</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Text style={[styles.heroBig, { color: mainBand.color }]}>{report.mainScore.toFixed(0)}</Text>
+            <View style={{ gap: 6 }}>
+              <View style={[styles.cefrBadge, { backgroundColor: mainBand.color + '28', borderColor: mainBand.color + '55', alignSelf: 'flex-start' }]}>
+                <Text style={[styles.cefrText, { color: mainBand.color }]}>{report.cefrLevel}</Text>
+              </View>
+              {bandDiff !== null && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {bandDiff >= 0
+                    ? <IconArrowUp   size={12} color={mainBand.color}/>
+                    : <IconArrowDown size={12} color={colors.danger}/>
+                  }
+                  <Text style={[styles.insightText, { color: bandDiff >= 0 ? mainBand.color : colors.danger }]}>
+                    {bandDiff === 0
+                      ? `At target ${targetLevel}`
+                      : `${Math.abs(bandDiff)} band${Math.abs(bandDiff) > 1 ? 's' : ''} ${bandDiff > 0 ? 'above' : 'below'} target ${targetLevel}`
+                    }
+                  </Text>
+                </View>
+              )}
             </View>
-          )}
+          </View>
         </View>
       </View>
 
-      <View style={{ marginTop: 22 }}>
-        <Text style={[type.label, { marginBottom: 12 }]}>BY DIMENSION</Text>
-        <View style={{ gap: 10 }}>
-          {DIM_CONFIG.map(d => {
-            const score = findScore(scores, d.kw);
+      {/* ── HOW WE CALCULATED YOUR SCORE ── */}
+      <Card padding={16} style={{ marginTop: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <Text style={type.label}>HOW WE CALCULATED YOUR SCORE?</Text>
+          <View style={{ flex: 1 }}/>
+          <IconButton size={24} onPress={() => setRubricInfoOpen(true)}>
+            <IconInfo size={14} color={colors.textTertiary}/>
+          </IconButton>
+        </View>
+        <Text style={styles.scoringNote}>
+          Your final score is the weighted average of the rubric criteria below. Each criterion contributes by its weight (in %).
+        </Text>
+      </Card>
+
+      {/* ── Rubric info bottom sheet ── */}
+      <BottomSheet visible={rubricInfoOpen} onClose={() => setRubricInfoOpen(false)}>
+        <Text style={[type.label, { marginBottom: 16, paddingHorizontal: 4 }]}>SCORING CRITERIA</Text>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {RUBRIC_DESCRIPTIONS.map((item, i) => (
+            <View
+              key={i}
+              style={[
+                styles.rubricInfoItem,
+                i < RUBRIC_DESCRIPTIONS.length - 1 && styles.rubricInfoDivider,
+              ]}
+            >
+              <Text style={styles.rubricInfoTitle}>{item.title}</Text>
+              <Text style={styles.rubricInfoBody}>{item.body}</Text>
+            </View>
+          ))}
+          <View style={{ height: 8 }}/>
+        </ScrollView>
+      </BottomSheet>
+
+      {/* ── Rubric criterion cards ── */}
+      {rubricFeedback.length > 0 && (
+        <View style={{ marginTop: 12, gap: 10 }}>
+          {rubricFeedback.map((cf, i) => {
+            const tab  = criterionToConfig(cf.criterion).tab;
+            const band = getCefrBand(cf.score);
+            const obs  = cf.observation ?? '';
+            const preview = obs.length > 150 ? obs.slice(0, 150) + '...' : obs;
             return (
-              <RubricBar
-                key={d.kw}
-                label={d.label}
-                score={score}
-                level={scoreToCefr(score)}
-                color={d.color}
-                onPress={() => onTabChange(d.tab)}
-              />
+              <Card
+                key={i}
+                padding={16}
+                onPress={() => onTabChange(tab)}
+                style={{ borderLeftWidth: 3, borderLeftColor: band.color }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <Text style={styles.criterionName}>{cf.criterion}</Text>
+                    {!!cf.weight && (
+                      <Text style={styles.weightText}>{cf.weight}</Text>
+                    )}
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                    <Text style={[styles.dimScore, { color: band.color }]}>{cf.score.toFixed(0)}</Text>
+                  </View>
+                </View>
+                {!!preview && (
+                  <Text style={styles.observationText}>{preview}</Text>
+                )}
+              </Card>
             );
           })}
         </View>
-      </View>
-
-      {actions.length > 0 && (
-        <View style={{ marginTop: 22 }}>
-          <Text style={[type.label, { marginBottom: 10 }]}>TOP 3 ACTIONS</Text>
-          <View style={{ gap: 8 }}>
-            {actions.map((a, i) => (
-              <ActionRow key={i} n={i + 1} color={a.color} text={a.text} onPress={() => onTabChange(a.tab)}/>
-            ))}
-          </View>
-        </View>
       )}
 
-      <FeedbackSection result={report.result}/>
+      {/* ── CEFR Level Check graphic ── */}
+      {targetLevel && achievedLevel && (
+        <>
+          <Text style={[type.label, { marginTop: 22, marginBottom: 6 }]}>CEFR LEVEL CHECK</Text>
+          <Card padding={16}>
+            <CefrLevelCheck
+              targetLevel={targetLevel}
+              achievedLevel={achievedLevel}
+              bandDiff={bandDiff}
+            />
+          </Card>
+        </>
+      )}
+
+      {/* ── Evidence ── */}
+      {!!evidence?.evidence && (
+        <Card padding={14} style={{ marginTop: 12 }}>
+          <Text style={[type.label, { marginBottom: 10 }]}>EVIDENCE</Text>
+          <Text style={styles.evidenceText}>{evidence.evidence}</Text>
+        </Card>
+      )}
+
     </>
   );
 }
 
-function FeedbackSection({ result }: { result: import('@/types/api').ReportResultEntry[] }) {
-  const html = feedbackMarkdownToHtml(getGlobalFeedback(result));
-  if (!html) return null;
+// ── CEFR Level Check bileşeni ────────────────────────────────────────────────
+export function CefrLevelCheck({
+  targetLevel, achievedLevel, bandDiff,
+}: { targetLevel: string; achievedLevel: string; bandDiff: number | null }) {
+  const targetBand   = CEFR_BANDS.find(b => b.level === targetLevel);
+  const achievedBand = CEFR_BANDS.find(b => b.level === achievedLevel);
+  const diffColor    = bandDiff === null ? colors.textSecondary
+    : bandDiff > 0 ? (achievedBand?.color ?? colors.brandGreen)
+    : bandDiff < 0 ? colors.danger
+    : colors.brandGreenDeep;
+
   return (
-    <View style={{ marginTop: 22 }}>
-      <Text style={[type.label, { marginBottom: 10 }]}>FEEDBACK</Text>
-      <Card padding={18}>
-        <HtmlText html={html} style={styles.feedbackText}/>
-      </Card>
+    <View>
+      {/* TARGET → DETECTED */}
+      <View style={styles.levelCheckRow}>
+        <View style={[styles.levelBox, {
+          backgroundColor: targetBand?.bg ?? colors.bgCardTint,
+          borderColor: (targetBand?.color ?? colors.border) + '55',
+        }]}>
+          <Text style={styles.levelBoxLabel}>TARGET</Text>
+          <Text style={[styles.levelBoxValue, { color: targetBand?.color ?? colors.textSecondary }]}>
+            {targetLevel}
+          </Text>
+        </View>
+
+        <IconArrow size={20} color={colors.textTertiary}/>
+
+        <View style={[styles.levelBox, {
+          backgroundColor: achievedBand?.bg ?? colors.bgCardTint,
+          borderColor: achievedBand?.color ?? colors.border,
+          borderWidth: 1.5,
+        }]}>
+          <Text style={styles.levelBoxLabel}>DETECTED</Text>
+          <Text style={[styles.levelBoxValue, { color: achievedBand?.color ?? colors.textSecondary }]}>
+            {achievedLevel}
+          </Text>
+        </View>
+      </View>
+
+      {/* Özet satır */}
+      {bandDiff !== null && (
+        <View style={styles.levelSummary}>
+          <Text style={[styles.levelSummaryText, { color: diffColor }]}>
+            {bandDiff === 0
+              ? `At target level ${targetLevel}.`
+              : `${Math.abs(bandDiff)} band${Math.abs(bandDiff) > 1 ? 's' : ''} ${bandDiff > 0 ? 'above' : 'below'} target ${targetLevel}.`
+            }
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
 
-function ActionRow({ n, color, text, onPress }: { n: number; color: string; text: string; onPress: () => void }) {
-  return (
-    <Card padding={14} onPress={onPress} style={{ borderLeftWidth: 3, borderLeftColor: color, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <Text style={styles.actionNum}>{n}</Text>
-      <Text style={styles.actionText}>{text}</Text>
-      <IconChevRight size={14} color={colors.textTertiary}/>
-    </Card>
-  );
-}
 
 const styles = StyleSheet.create({
   heroCard: {
     position: 'relative', overflow: 'hidden',
     backgroundColor: colors.bgInverse,
     borderRadius: radii.lg,
-    padding: 16, paddingTop: 16, paddingBottom: 16,
+    padding: 16,
   },
   heroBlob: {
     position: 'absolute', right: -40, top: -30,
     width: 130, height: 130, borderRadius: 65,
-    backgroundColor: '#1F2A6E',
   },
-  heroBig:   { fontFamily: fonts.sansEb, fontSize: 52, color: '#fff', letterSpacing: -1, lineHeight: 52 },
-  heroScore: { fontFamily: fonts.sansSb, fontSize: 16, color: colors.textInverseSoft },
-  insight: {
-    marginTop: 14, alignSelf: 'flex-start',
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: colors.bgInverse2,
+  heroBig:   { fontFamily: fonts.sansEb, fontSize: 64, letterSpacing: -2, lineHeight: 68 },
+  cefrBadge: {
+    borderRadius: radii.sm, borderWidth: 1,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  cefrText:    { fontFamily: fonts.sansEb, fontSize: 14 },
+  insightText: { fontFamily: fonts.sansSb, fontSize: 13 },
+
+  scoringNote: {
+    fontFamily: fonts.sans, fontSize: 13, lineHeight: 19,
+    color: colors.textTertiary,
+  },
+
+  criterionName:   { fontFamily: fonts.sansSb, fontSize: 18, color: colors.textPrimary, letterSpacing: -0.2 },
+  weightText:      { marginTop: 3, fontFamily: fonts.mono, fontSize: 11, color: colors.textTertiary, letterSpacing: 0.4 },
+  dimScore:        { fontFamily: fonts.sansEb, fontSize: 24, lineHeight: 30  },
+  observationText: { marginTop: 10, fontFamily: fonts.sans, fontSize: 13, lineHeight: 18, color: colors.textSecondary },
+
+  // CEFR Level Check
+  levelCheckHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  levelCheckRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  levelBox: {
+    flex: 1, padding: 14, borderRadius: radii.md,
+    borderWidth: 1,
+  },
+  levelBoxLabel: {
+    fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1.2,
+    color: colors.textTertiary, marginBottom: 6,
+  },
+  levelBoxValue: { fontFamily: fonts.sansEb, fontSize: 28, letterSpacing: -0.5 },
+  levelSummary: {
+    backgroundColor: colors.bgCardTint,
     borderRadius: radii.sm,
-    paddingHorizontal: 12, paddingVertical: 10,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 14, paddingVertical: 10,
   },
-  insightText: { fontFamily: fonts.sansSb, fontSize: 13, color: '#fff' },
-  actionNum: {
-    width: 22, height: 22, borderRadius: radii.sm,
-    fontFamily: fonts.sansEb, fontSize: 13, color: colors.textSecondary,
-    textAlign: 'center', lineHeight: 22,
-  },
-  actionText:   { flex: 1, fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary },
+  levelSummaryText: { fontFamily: fonts.sansSb, fontSize: 14, lineHeight: 20 },
+
+  // Evidence
+  evidenceText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: colors.textSecondary },
+
   feedbackText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.textSecondary },
+
+  // Rubric info bottom sheet
+  rubricInfoItem:    { paddingVertical: 16 },
+  rubricInfoDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline },
+  rubricInfoTitle:   { fontFamily: fonts.sansSb, fontSize: 16, color: colors.brandBlue, marginBottom: 6 },
+  rubricInfoBody:    { fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
 });

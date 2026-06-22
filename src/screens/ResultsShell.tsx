@@ -5,17 +5,26 @@ import Animated, { SlideInRight, SlideInLeft, SlideOutRight, SlideOutLeft } from
 
 import { ScreenSurface } from '@/components/Screen';
 import IconButton from '@/components/IconButton';
-import { IconChevLeft, IconDownload } from '@/components/Icons';
+import { IconChevLeft } from '@/components/Icons';
 import { ReportProvider, useReport } from '@/context/ReportContext';
 import { colors, fonts, radii, type } from '@/theme';
 import type { ResultsTab } from '@/navigation/types';
 
 import { OverviewContent } from './ResultsOverview';
-import { WritingList, WritingPeekSheet } from './ResultsWriting';
-import type { WritingSharedState, FilterKind } from './ResultsWriting';
-import { DimensionContent } from './DimensionScreen';
+import { WritingList, WritingBottomSheet } from './ResultsWriting';
+import type { WritingSharedState, BSTab } from './ResultsWriting';
+import { FeedbackContent } from './ResultsFeedback';
+import { ContentFulfillmentContent, OrganisationCohesionContent, VocabularyWordChoiceContent, GrammarLanguageContent } from './DimensionScreen';
 
-const TABS: ResultsTab[] = ['Overview', 'Writing', 'Task', 'Cohesion', 'Vocab', 'Grammar'];
+const TABS: ResultsTab[] = [
+  'Overview',
+  'Your Writing',
+  'Feedback',
+  'Content & Fulfillment',
+  'Organization & Cohesion',
+  'Vocabulary & Word Choice',
+  'Grammar & Language Use',
+];
 
 type Props = { solvedTaskId: string };
 
@@ -29,19 +38,21 @@ export default function ResultsShell({ solvedTaskId }: Props) {
 
 function ShellInner() {
   const nav = useNavigation();
-  const { loading, error } = useReport();
+  const { loading, error, report } = useReport();
 
   const [tab, setTab]       = useState<ResultsTab>('Overview');
   const prevTabRef          = useRef<ResultsTab>('Overview');
-  const directionRef        = useRef<1 | -1>(1); // 1 = ileri (sağdan), -1 = geri (soldan)
+  const directionRef        = useRef<1 | -1>(1);
+  const pillsScrollRef      = useRef<ScrollView>(null);
+  const pillLayouts         = useRef<{ x: number; width: number }[]>([]);
+  const pillsContainerWidth = useRef<number>(0);
 
   // Writing sekmesi için paylaşılan state
-  const [wFilter,   setWFilter]   = useState<FilterKind>('All');
-  const [wPick,     setWPick]     = useState(0);
-  const [wExpanded, setWExpanded] = useState(true);
+  const [bsTab,     setBsTab]     = useState<BSTab>('Language Convention');
+  const [lcFilter,  setLcFilter]  = useState('all');
+  const [modalIdx,  setModalIdx]  = useState<number | null>(null);
   const writingState: WritingSharedState = {
-    filter: wFilter, pick: wPick, expanded: wExpanded,
-    setFilter: setWFilter, setPick: setWPick, setExpanded: setWExpanded,
+    bsTab, setBsTab, lcFilter, setLcFilter, modalIdx, setModalIdx,
   };
 
   const changeTab = (newTab: ResultsTab) => {
@@ -50,6 +61,11 @@ function ShellInner() {
     directionRef.current = newIdx >= oldIdx ? 1 : -1;
     prevTabRef.current = tab;
     setTab(newTab);
+    const layout = pillLayouts.current[newIdx];
+    if (layout && pillsContainerWidth.current > 0) {
+      const center = layout.x + layout.width / 2 - pillsContainerWidth.current / 2;
+      pillsScrollRef.current?.scrollTo({ x: Math.max(0, center), animated: true });
+    }
   };
 
   const entering = directionRef.current >= 0
@@ -63,32 +79,33 @@ function ShellInner() {
     <ScreenSurface>
       {/* ── Header (sabit, kaymaz) ── */}
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-          <IconButton onPress={() => nav.goBack()} style={{ marginTop: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <IconButton onPress={() => nav.goBack()}>
             <IconChevLeft size={18} color={colors.textPrimary}/>
           </IconButton>
-          <View style={{ flex: 1 }}>
-            <View style={styles.statusRow}>
-              <View style={styles.statusDot}/>
-              <Text style={[type.labelSm, { color: colors.brandGreenDeep }]}>EVALUATED</Text>
-            </View>
-            <Text style={styles.title}>Results</Text>
-          </View>
-          <IconButton style={{ marginTop: 4 }}>
-            <IconDownload size={18} color={colors.textPrimary}/>
-          </IconButton>
+          <Text style={[styles.title, { flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">
+            {report?.taskName ?? 'Results'}
+          </Text>
         </View>
 
         {/* ── Tab pills (sabit) ── */}
         <ScrollView
+          ref={pillsScrollRef}
           horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.pillsRow}
           style={{ marginHorizontal: -20, marginTop: 14 }}
+          onLayout={e => { pillsContainerWidth.current = e.nativeEvent.layout.width; }}
         >
-          {TABS.map(t => {
+          {TABS.map((t, idx) => {
             const isActive = t === tab;
             return (
               <Pressable key={t} onPress={() => changeTab(t)}
+                onLayout={e => {
+                  pillLayouts.current[idx] = {
+                    x: e.nativeEvent.layout.x,
+                    width: e.nativeEvent.layout.width,
+                  };
+                }}
                 style={[
                   styles.pill,
                   isActive
@@ -122,25 +139,27 @@ function ShellInner() {
             contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
             showsVerticalScrollIndicator={false}
           >
-            {tab === 'Overview' && <OverviewContent onTabChange={changeTab}/>}
-            {tab === 'Writing'  && <WritingList {...writingState}/>}
-            {tab === 'Task'     && <DimensionContent tab="Task"/>}
-            {tab === 'Cohesion' && <DimensionContent tab="Cohesion"/>}
-            {tab === 'Vocab'    && <DimensionContent tab="Vocab"/>}
-            {tab === 'Grammar'  && <DimensionContent tab="Grammar"/>}
+            {tab === 'Overview'                && <OverviewContent onTabChange={changeTab}/>}
+            {tab === 'Your Writing'            && <WritingList {...writingState}/>}
+            {tab === 'Feedback'                && <FeedbackContent/>}
+            {tab === 'Content & Fulfillment'   && <ContentFulfillmentContent/>}
+            {tab === 'Organization & Cohesion' && <OrganisationCohesionContent/>}
+            {tab === 'Vocabulary & Word Choice' && <VocabularyWordChoiceContent/>}
+            {tab === 'Grammar & Language Use'  && <GrammarLanguageContent/>}
           </ScrollView>
         </Animated.View>
       )}
 
       {/* ── Writing peek overlay (yalnızca Writing sekmesinde) ── */}
-      {!loading && !error && tab === 'Writing' && (
+      {!loading && !error && tab === 'Your Writing' && (
         <View pointerEvents="box-none" style={styles.overlayWrap}>
-          <WritingPeekSheet {...writingState}/>
+          <WritingBottomSheet {...writingState}/>
         </View>
       )}
     </ScreenSurface>
   );
 }
+
 
 const styles = StyleSheet.create({
   header: {
@@ -148,8 +167,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgCard,
     borderBottomWidth: 1, borderBottomColor: colors.hairline,
   },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  statusDot: { width: 6, height: 6, borderRadius: 99, backgroundColor: colors.brandGreen },
   title: { fontFamily: fonts.sansSb, fontSize: 20, color: colors.textPrimary, letterSpacing: -0.3 },
 
   pillsRow: { paddingHorizontal: 16, paddingBottom: 14, gap: 6 },
