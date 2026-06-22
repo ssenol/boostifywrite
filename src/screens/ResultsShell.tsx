@@ -14,10 +14,10 @@ import { OverviewContent } from './ResultsOverview';
 import { WritingList, WritingBottomSheet } from './ResultsWriting';
 import type { WritingSharedState, BSTab } from './ResultsWriting';
 import { FeedbackContent } from './ResultsFeedback';
-import { ContentFulfillmentContent } from './ContentFulfillment';
-import { OrganisationCohesionContent } from './OrganisationCohesion';
-import { VocabularyWordChoiceContent } from './VocabularyWordChoice';
-import { GrammarLanguageContent } from './GrammarLanguageUse';
+import { ContentFulfillmentContent } from './ResultsContentFulfillment';
+import { OrganisationCohesionContent } from './ResultsOrganisationCohesion';
+import { VocabularyWordChoiceContent } from './ResultsVocabularyWordChoice';
+import { GrammarLanguageContent } from './ResultsGrammarLanguageUse';
 
 const TABS: ResultsTab[] = [
   'Overview',
