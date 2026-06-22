@@ -176,10 +176,19 @@ export default function Home() {
                   <CompletedTaskCard
                     key={c.assignedTaskId}
                     exercise={c}
-                    onPress={() => bestAttempt && (nav.getParent() as any)?.navigate('ReportStack', {
-                      screen: 'Results',
-                      params: { solvedTaskId: bestAttempt.solvedTaskId },
-                    })}
+                    onPress={() => {
+                      if (!bestAttempt) return;
+                      // Önce ReportStack'e geç, sonra Results'a git
+                      const parent = nav.getParent();
+                      parent?.navigate('ReportStack', { screen: 'Report' });
+                      // Report sayfası yüklendikten sonra Results'a git
+                      setTimeout(() => {
+                        parent?.navigate('ReportStack', {
+                          screen: 'Results',
+                          params: { solvedTaskId: bestAttempt.solvedTaskId },
+                        });
+                      }, 50);
+                    }}
                   />
                 );
               })}

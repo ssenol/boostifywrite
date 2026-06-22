@@ -12,8 +12,8 @@ import * as Biometric from '@/utils/biometric';
 
 const SETTINGS = [
   { label: 'Privacy',        value: '' },
-  { label: 'Help & support', value: '' },
-  { label: 'About',          value: 'v2.1' },
+  { label: 'Help & Support', value: '' },
+  { label: 'About',          value: 'v1.0' },
 ];
 
 export default function Profile() {
@@ -104,7 +104,7 @@ export default function Profile() {
         <View style={styles.group}>
           {user && (
             <View style={[styles.row, styles.divider]}>
-              <Text style={styles.rowLabel}>Student</Text>
+              <Text style={styles.rowLabel}>Student Name</Text>
               <Text style={styles.rowValue}>{`${user.name} ${user.lastName}`}</Text>
             </View>
           )}
@@ -130,11 +130,11 @@ export default function Profile() {
             </View>
           )}
 
-          {user?.className && (
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Class</Text>
-              <Text style={styles.rowValue}>{user.className}</Text>
-            </View>
+          {user?.classInfo[0] && (
+              <View style={[styles.row]}>
+                <Text style={styles.rowLabel}>Class</Text>
+                <Text style={styles.rowValue}>{user.classInfo[0]}</Text>
+              </View>
           )}
         </View>
 
@@ -166,12 +166,12 @@ export default function Profile() {
 
         {/* Çıkış */}
         <Pressable style={styles.signOut} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign out</Text>
+          <Text style={styles.signOutText}>Sign Out</Text>
         </Pressable>
 
         {/* Reset Data */}
         <Pressable style={styles.resetData} onPress={() => setShowResetDataDialog(true)}>
-          <Text style={styles.resetDataText}>Reset all data</Text>
+          <Text style={styles.resetDataText}>Reset All Data</Text>
         </Pressable>
       </ScreenScroll>
 
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
 
   signOut: {
     marginTop: 16, padding: 14,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radii.pill,
+    borderWidth: 1, borderColor: colors.danger, borderRadius: radii.pill,
     alignItems: 'center',
   },
   signOutText: { fontFamily: fonts.sansSb, fontSize: 14, color: colors.danger },

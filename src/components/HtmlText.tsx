@@ -16,7 +16,7 @@ function parse(html: string): Segment[] {
     .replace(/<\/li>/gi, '\n')
     .replace(/<li[^>]*>/gi, '• ')
     .replace(/<\/?(ul|ol)[^>]*>/gi, '')
-    .replace(/<\/?(em|i|u|s|span|div|h[1-6])[^>]*>/gi, '')
+    .replace(/<\/?(em|i|u|s|span|div|h[1-6])(?!\w)[^>]*>/gi, '')
     .replace(/[ \t]+/g, ' ')       // yatay whitespace'i tekleştir
     .replace(/\n[ \t]+/g, '\n')    // satır başı girintilerini temizle
     .replace(/[ \t]+\n/g, '\n')    // satır sonu boşluklarını temizle
