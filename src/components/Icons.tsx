@@ -138,6 +138,15 @@ export const IconClose = ({ size = 16, color = '#000' }: P) => (
   </Svg>
 );
 
+// Uyarı üçgeni — `color` ile tek renk (koyu arka plan üstünde beyaz gibi)
+export const IconAlertTriangle = ({ size = 20, color = '#fff' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+    <Path d="M9.13 3.5L2 16h16L10.87 3.5a1 1 0 0 0-1.74 0z" stroke={color} strokeWidth={1.6} strokeLinejoin="round"/>
+    <Path d="M10 9v4" stroke={color} strokeWidth={1.8} strokeLinecap="round"/>
+    <Circle cx={10} cy={15} r={0.9} fill={color}/>
+  </Svg>
+);
+
 // Convenience map
 export const TabIcon = {
   Home: IconHomeTab, Assignments: IconWriteTab, Report: IconProgressTab, Profile: IconProfileTab,

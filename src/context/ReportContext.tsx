@@ -137,6 +137,27 @@ export function getOutlineCompliance(result: ReportResultEntry[]): OutlineSectio
   return r?.outlineCompliance ?? [];
 }
 
+// result[0] içindeki plagiarism check verisini döndürür
+export type PlagiarismHighestMatch = {
+  responseOriginal:     string;
+  matchedResponse?:     string;
+  overallScore:         number;
+};
+
+export type PlagiarismCheck = {
+  hasPlagiarism: boolean;
+  highestMatch?: PlagiarismHighestMatch;
+};
+
+export function getPlagiarismCheck(result: ReportResultEntry[]): PlagiarismCheck | null {
+  const r = (result[0]?.result ?? {}) as Record<string, unknown>;
+  if (typeof r.hasPlagiarism !== 'boolean') return null;
+  return {
+    hasPlagiarism: r.hasPlagiarism,
+    highestMatch:  r.highestMatch as PlagiarismHighestMatch | undefined,
+  };
+}
+
 // result[] içinde lexicalRange verisini bulur
 export type AnnotatedQuote = { quote: string; note: string };
 export type VocabularyUpgrade = { from: string; to?: string[]; suggestions?: string[] };

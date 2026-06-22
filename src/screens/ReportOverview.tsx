@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 
 import BottomSheet from '@/components/BottomSheet';
 import Card from '@/components/Card';
 import IconButton from '@/components/IconButton';
-import { IconArrow, IconArrowUp, IconArrowDown, IconInfo } from '@/components/Icons';
+import { IconArrow, IconArrowUp, IconArrowDown, IconInfo, IconAlertTriangle } from '@/components/Icons';
 import {
   useReport,
   getRubricCriteriaFeedback,
   getTargetCefrLevel, getUserResponseCefrEvidence,
+  getPlagiarismCheck,
 } from '@/context/ReportContext';
 import { colors, fonts, radii, type, getCefrBand, CEFR_BANDS } from '@/theme';
 import type { ResultsTab } from '@/navigation/types';
@@ -53,7 +54,8 @@ function criterionToConfig(criterion: string): { color: string; tab: ResultsTab 
 
 export function OverviewContent({ onTabChange }: Props) {
   const { report } = useReport();
-  const [rubricInfoOpen, setRubricInfoOpen] = useState(false);
+  const [rubricInfoOpen,    setRubricInfoOpen]    = useState(false);
+  const [plagiarismSheetOpen, setPlagiarismSheetOpen] = useState(false);
   if (!report) return null;
 
   const rubricFeedback = getRubricCriteriaFeedback(report.result);
@@ -65,10 +67,63 @@ export function OverviewContent({ onTabChange }: Props) {
   const achievedIdx   = CEFR_BANDS.findIndex(b => b.level === achievedLevel);
   const bandDiff      = (targetIdx !== -1 && achievedIdx !== -1) ? achievedIdx - targetIdx : null;
 
-  const evidence = getUserResponseCefrEvidence(report.result);
+  const evidence    = getUserResponseCefrEvidence(report.result);
+  const plagiarism  = getPlagiarismCheck(report.result);
+  const match       = plagiarism?.highestMatch;
+  const simScore    = match
+    ? (match.overallScore > 1 ? match.overallScore : match.overallScore * 100)
+    : 0;
 
   return (
     <>
+      {/* ── Plagiarism banner ── */}
+      {plagiarism?.hasPlagiarism && (
+        <View style={styles.plagBanner}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+            <IconAlertTriangle size={20} color="#fff"/>
+            <Text style={styles.plagBannerText}>
+              This response shows similarity with previous submissions.
+            </Text>
+          </View>
+          <Pressable style={styles.plagDetailBtn} onPress={() => setPlagiarismSheetOpen(true)}>
+            <Text style={styles.plagDetailBtnText}>See Details</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* ── Plagiarism detail bottom sheet ── */}
+      <BottomSheet visible={plagiarismSheetOpen} onClose={() => setPlagiarismSheetOpen(false)}>
+        <Text style={[type.label, { marginBottom: 16, paddingHorizontal: 4, fontSize: 16 }]}>
+          Similarity Report Detail
+        </Text>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Score banner */}
+          <View style={styles.plagSheetBanner}>
+            <IconAlertTriangle size={18} color="#fff"/>
+            <Text style={styles.plagSheetBannerText}>
+              Your response shows a{' '}
+              <Text style={{ fontFamily: fonts.sansEb }}>{simScore.toFixed(2)}%</Text>
+              {' '}similarity compared to given answers!
+            </Text>
+          </View>
+
+          {/* Two-column comparison */}
+          <View style={styles.plagCols}>
+            <View style={styles.plagCol}>
+              <Text style={styles.plagColTitle}>Your Response</Text>
+              <Text style={styles.plagColText}>{match?.responseOriginal ?? ''}</Text>
+            </View>
+            <View style={[styles.plagCol, styles.plagColRight]}>
+              <Text style={[styles.plagColTitle, { color: colors.orange }]}>Most Similar Response</Text>
+              <Text style={styles.plagColText}>
+                {match?.matchedResponse ?? match?.responseOriginal ?? ''}
+              </Text>
+            </View>
+          </View>
+          <View style={{ height: 16 }}/>
+        </ScrollView>
+      </BottomSheet>
+
       {/* ── Hero ── */}
       <View style={styles.heroCard}>
         <View style={[styles.heroBlob, { backgroundColor: mainBand.color + '35' }]}/>
@@ -313,4 +368,41 @@ const styles = StyleSheet.create({
   rubricInfoDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline },
   rubricInfoTitle:   { fontFamily: fonts.sansSb, fontSize: 16, color: colors.brandBlue, marginBottom: 6 },
   rubricInfoBody:    { fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
+
+  // Plagiarism banner
+  plagBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.orange,
+    borderRadius: radii.md, padding: 14, marginBottom: 12,
+  },
+  plagBannerText: {
+    flex: 1, fontFamily: fonts.sansSb, fontSize: 13, lineHeight: 18, color: '#fff',
+  },
+  plagDetailBtn: {
+    backgroundColor: '#fff', borderRadius: radii.pill,
+    paddingHorizontal: 14, paddingVertical: 7,
+  },
+  plagDetailBtnText: { fontFamily: fonts.sansSb, fontSize: 13, color: colors.orange },
+
+  // Plagiarism bottom sheet
+  plagSheetBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: colors.orange, borderRadius: radii.md,
+    padding: 14, marginBottom: 20,
+  },
+  plagSheetBannerText: {
+    flex: 1, fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: '#fff',
+  },
+  plagCols: { flexDirection: 'row', gap: 12 },
+  plagCol:  { flex: 1 },
+  plagColRight: {
+    backgroundColor: '#FEF2F2', borderRadius: radii.md,
+    padding: 12,
+  },
+  plagColTitle: {
+    fontFamily: fonts.sansSb, fontSize: 14, color: colors.textPrimary, marginBottom: 10,
+  },
+  plagColText: {
+    fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.textSecondary,
+  },
 });
