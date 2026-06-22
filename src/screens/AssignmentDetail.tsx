@@ -207,6 +207,7 @@ export default function AssignmentDetail() {
             </Card>
           )}
 
+          {/* YOU'LL BE GRADED ON — geçici olarak gizlendi
           {rubricCriteria.length > 0 && (
             <Card padding={16}>
               <View style={styles.rubricHeader}>
@@ -226,6 +227,7 @@ export default function AssignmentDetail() {
               ))}
             </Card>
           )}
+          */}
         </View>
       </ScreenScroll>
 
@@ -247,11 +249,6 @@ export default function AssignmentDetail() {
             style={styles.sheetImage}
             resizeMode="contain"
         />
-        {question?.mediaFiles[0]?.transcript ? (
-          <ScrollView style={{ marginTop: 16, marginBottom: 8 }} showsVerticalScrollIndicator={false}>
-            <HtmlText html={question.mediaFiles[0].transcript} style={styles.sheetTranscript}/>
-          </ScrollView>
-        ) : null}
       </BottomSheet>
 
       {/* Rubric bilgi sheet */}
