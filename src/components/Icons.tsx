@@ -66,6 +66,12 @@ export const IconArrowUp = ({ size = 14, color = '#fff' }: P) => (
   </Svg>
 );
 
+export const IconArrowDown = ({ size = 14, color = '#fff' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+    <Path d="M7 2.5V11.5M7 11.5L3 7.5M7 11.5L11 7.5" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
 export const IconInbox = ({ size = 32, color = '#000' }: P) => (
   <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
     <Path d="M5 18L9 7H23L27 18V24C27 25.1 26.1 26 25 26H7C5.9 26 5 25.1 5 24V18Z" stroke={color} strokeWidth={1.6} strokeLinejoin="round"/>
@@ -123,6 +129,12 @@ export const IconInfo = ({ size = 16, color = '#000' }: P) => (
   <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
     <Path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13z" stroke={color} strokeWidth={1.4}/>
     <Path d="M8 7.25v4M8 5.25v.5" stroke={color} strokeWidth={1.6} strokeLinecap="round"/>
+  </Svg>
+);
+
+export const IconClose = ({ size = 16, color = '#000' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <Path d="M3 3L13 13M13 3L3 13" stroke={color} strokeWidth={1.8} strokeLinecap="round"/>
   </Svg>
 );
 

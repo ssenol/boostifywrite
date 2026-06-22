@@ -53,6 +53,7 @@ export const colors = {
   // ── State ──
   success:    '#16A34A',
   warning:    '#C99016',
+  orange:     '#F97316',
   danger:     '#DC2626',
   dangerSoft: '#FEE2E2',
   info:       '#1F94DC',
@@ -127,15 +128,50 @@ export const motion = {
   slow: 400,
 } as const;
 
-// CEFR seviyesi → renk haritalama. Tüm LevelBadge'lerin tek noktası.
+// ── CEFR Band tablosu (0–100 puan skalası) ────────────────────────────
+export type CefrBand = {
+  min: number; max: number;
+  level: string; label: string;
+  color: string; bg: string;
+};
+
+export const CEFR_BANDS: CefrBand[] = [
+  { min: 0,  max: 29,  level: 'Pre-A1', label: 'Below A1',                 color: '#B7B7B7', bg: '#F5F5F5' },
+  { min: 30, max: 39,  level: 'A1',     label: 'Beginner',                 color: '#FE1900', bg: '#FFECEA' },
+  { min: 40, max: 49,  level: 'A1+',    label: 'High Beginner',            color: '#FF6B00', bg: '#FFEEDD' },
+  { min: 50, max: 59,  level: 'A2',     label: 'Elementary',               color: '#FF8800', bg: '#FFEFDB' },
+  { min: 60, max: 69,  level: 'A2+',    label: 'High Elementary',          color: '#FFB300', bg: '#FFF4D6' },
+  { min: 70, max: 79,  level: 'B1',     label: 'Intermediate',             color: '#FFC107', bg: '#FFF8DD' },
+  { min: 80, max: 84,  level: 'B1+',    label: 'High Intermediate',        color: '#9BCB3E', bg: '#F1F8E1' },
+  { min: 85, max: 89,  level: 'B2',     label: 'Upper Intermediate',       color: '#4CAF50', bg: '#E5F4E6' },
+  { min: 90, max: 93,  level: 'B2+',    label: 'High Upper Intermediate',  color: '#00BCD4', bg: '#DAF5F9' },
+  { min: 94, max: 96,  level: 'C1',     label: 'Advanced',                 color: '#3E4EF0', bg: '#E7E9FF' },
+  { min: 97, max: 98,  level: 'C1+',    label: 'High Advanced',            color: '#6366F1', bg: '#E5E7FF' },
+  { min: 99, max: 100, level: 'C2',     label: 'Mastery',                  color: '#8B5CF6', bg: '#EFE9FF' },
+];
+
+export const CEFR_FALLBACK: CefrBand = {
+  min: 0, max: 0, level: '-', label: 'Not evaluated', color: '#B7B7B7', bg: '#F5F5F5',
+};
+
+export function getCefrBand(score: number): CefrBand {
+  return CEFR_BANDS.find(b => score >= b.min && score <= b.max) ?? CEFR_FALLBACK;
+}
+
+// CEFR level string → renk. LevelBadge ve diğer string-tabanlı kullanımlar için.
 export const levelColor = (level: string): { fg: string; bg: string } => {
-  if (level.startsWith('A1')) return { fg: '#8B5CF6', bg: '#EFE7FF' };
-  if (level.startsWith('A2')) return { fg: colors.rubricTask, bg: colors.rubricTaskSoft };
-  if (level.startsWith('B1')) return { fg: colors.brandGreenDeep, bg: colors.brandGreenSoft };
-  if (level.startsWith('B2')) return { fg: '#0E7490', bg: '#CFFAFE' };
-  return { fg: '#C2410C', bg: '#FED7AA' };
+  const band = CEFR_BANDS.find(b => b.level === level);
+  if (band) return { fg: band.color, bg: band.bg };
+  // Partial match fallback
+  if (level.startsWith('C'))  return { fg: '#3E4EF0', bg: '#E7E9FF' };
+  if (level.startsWith('B2')) return { fg: '#00BCD4', bg: '#DAF5F9' };
+  if (level.startsWith('B1')) return { fg: '#9BCB3E', bg: '#F1F8E1' };
+  if (level.startsWith('B'))  return { fg: '#FFC107', bg: '#FFF8DD' };
+  if (level.startsWith('A2')) return { fg: '#FF8800', bg: '#FFEFDB' };
+  if (level.startsWith('A1')) return { fg: '#FE1900', bg: '#FFECEA' };
+  return { fg: CEFR_FALLBACK.color, bg: CEFR_FALLBACK.bg };
 };
 
 // Tek satır export — `import t from '@/theme'`
-const theme = { colors, spacing, radii, fonts, type, shadow, motion, levelColor };
+const theme = { colors, spacing, radii, fonts, type, shadow, motion, levelColor, getCefrBand, CEFR_BANDS };
 export default theme;

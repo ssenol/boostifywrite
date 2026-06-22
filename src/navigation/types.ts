@@ -23,7 +23,14 @@ export type TabParamList = {
 type ResultParams = { solvedTaskId: string };
 
 // Tab names used within the Results screen (not navigation routes)
-export type ResultsTab = 'Overview' | 'Writing' | 'Task' | 'Cohesion' | 'Vocab' | 'Grammar';
+export type ResultsTab =
+  | 'Overview'
+  | 'Your Writing'
+  | 'Feedback'
+  | 'Content & Fulfillment'
+  | 'Organization & Cohesion'
+  | 'Vocabulary & Word Choice'
+  | 'Grammar & Language Use';
 
 // ── Home stack ──
 export type HomeStackParamList = {
