@@ -10,14 +10,14 @@ import { ReportProvider, useReport } from '@/context/ReportContext';
 import { colors, fonts, radii, type } from '@/theme';
 import type { ResultsTab } from '@/navigation/types';
 
-import { OverviewContent } from './ResultsOverview';
-import { WritingList, WritingBottomSheet } from './ResultsWriting';
-import type { WritingSharedState, BSTab } from './ResultsWriting';
-import { FeedbackContent } from './ResultsFeedback';
-import { ContentFulfillmentContent } from './ResultsContentFulfillment';
-import { OrganisationCohesionContent } from './ResultsOrganisationCohesion';
-import { VocabularyWordChoiceContent } from './ResultsVocabularyWordChoice';
-import { GrammarLanguageContent } from './ResultsGrammarLanguageUse';
+import { OverviewContent } from './ReportOverview';
+import { WritingList, WritingBottomSheet } from './ReportWriting';
+import type { WritingSharedState, BSTab } from './ReportWriting';
+import { FeedbackContent } from './ReportFeedback';
+import { ContentFulfillmentContent } from './ReportContentFulfillment';
+import { OrganisationCohesionContent } from './ReportOrganisationCohesion';
+import { VocabularyWordChoiceContent } from './ReportVocabularyWordChoice';
+import { GrammarLanguageContent } from './ReportGrammarLanguageUse';
 
 const TABS: ResultsTab[] = [
   'Overview',
@@ -31,7 +31,7 @@ const TABS: ResultsTab[] = [
 
 type Props = { solvedTaskId: string };
 
-export default function ResultsShell({ solvedTaskId }: Props) {
+export default function ReportShell({ solvedTaskId }: Props) {
   return (
     <ReportProvider solvedTaskId={solvedTaskId}>
       <ShellInner/>

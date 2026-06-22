@@ -9,7 +9,7 @@ import {
   getTargetCefrLevel, getUserResponseCefrEvidence,
 } from '@/context/ReportContext';
 import { colors, fonts, radii, type, CEFR_BANDS } from '@/theme';
-import { CefrLevelCheck } from './ResultsOverview';
+import { CefrLevelCheck } from './ReportOverview';
 
 const KW = 'task';
 

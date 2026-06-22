@@ -24,7 +24,7 @@ import Home             from '@/screens/Home';
 import AssignmentDetail from '@/screens/AssignmentDetail';
 import Writing          from '@/screens/Writing';
 import Evaluating       from '@/screens/Evaluating';
-import ResultsScreen    from '@/screens/ResultsScreen';
+import ReportScreen    from '@/screens/ReportScreen';
 
 import AllTasks    from '@/screens/AllTasks';
 import Progress    from '@/screens/Progress';
@@ -56,7 +56,7 @@ function HomeNavigator() {
       <HomeStack.Screen name="AssignmentDetail" component={AssignmentDetail}/>
       <HomeStack.Screen name="Writing"         component={Writing}/>
       <HomeStack.Screen name="Evaluating"      component={Evaluating}/>
-      <HomeStack.Screen name="Results"         component={ResultsScreen}/>
+      <HomeStack.Screen name="Results"         component={ReportScreen}/>
       <HomeStack.Screen name="Error"           component={ErrorScreen}/>
     </HomeStack.Navigator>
   );
@@ -69,7 +69,7 @@ function AssignmentsNavigator() {
       <AssignmentsStack.Screen name="AssignmentDetail"  component={AssignmentDetail}/>
       <AssignmentsStack.Screen name="Writing"           component={Writing}/>
       <AssignmentsStack.Screen name="Evaluating"        component={Evaluating}/>
-      <AssignmentsStack.Screen name="Results"           component={ResultsScreen}/>
+      <AssignmentsStack.Screen name="Results"           component={ReportScreen}/>
       <AssignmentsStack.Screen name="Error"             component={ErrorScreen}/>
     </AssignmentsStack.Navigator>
   );
@@ -79,7 +79,7 @@ function ReportNavigator() {
   return (
     <ReportStack.Navigator screenOptions={stackOptions}>
       <ReportStack.Screen name="Report"   component={Progress}/>
-      <ReportStack.Screen name="Results"  component={ResultsScreen}/>
+      <ReportStack.Screen name="Results"  component={ReportScreen}/>
     </ReportStack.Navigator>
   );
 }
