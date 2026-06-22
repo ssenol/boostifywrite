@@ -10,6 +10,7 @@ import {
   getRubricCriteriaFeedback,
   getTargetCefrLevel, getUserResponseCefrEvidence,
   getPlagiarismCheck,
+  getAiDetectionCheck,
 } from '@/context/ReportContext';
 import { colors, fonts, radii, type, getCefrBand, CEFR_BANDS } from '@/theme';
 import type { ResultsTab } from '@/navigation/types';
@@ -54,8 +55,9 @@ function criterionToConfig(criterion: string): { color: string; tab: ResultsTab 
 
 export function OverviewContent({ onTabChange }: Props) {
   const { report } = useReport();
-  const [rubricInfoOpen,    setRubricInfoOpen]    = useState(false);
+  const [rubricInfoOpen,      setRubricInfoOpen]      = useState(false);
   const [plagiarismSheetOpen, setPlagiarismSheetOpen] = useState(false);
+  const [aiSheetOpen,         setAiSheetOpen]         = useState(false);
   if (!report) return null;
 
   const rubricFeedback = getRubricCriteriaFeedback(report.result);
@@ -69,6 +71,11 @@ export function OverviewContent({ onTabChange }: Props) {
 
   const evidence    = getUserResponseCefrEvidence(report.result);
   const plagiarism  = getPlagiarismCheck(report.result);
+  const aiDetection = getAiDetectionCheck(report.result);
+  const aiDoc       = aiDetection?.document;
+  const aiPct       = aiDoc
+    ? Math.round((aiDoc.completely_generated_prob ?? aiDoc.average_generated_prob ?? 1) * 100)
+    : 100;
   const match       = plagiarism?.highestMatch;
   const simScore    = match
     ? (match.overallScore > 1 ? match.overallScore : match.overallScore * 100)
@@ -90,6 +97,51 @@ export function OverviewContent({ onTabChange }: Props) {
           </Pressable>
         </View>
       )}
+
+      {/* ── AI Detection banner ── */}
+      {aiDetection?.isAi && (
+        <View style={[styles.plagBanner, { backgroundColor: colors.danger, marginTop: plagiarism?.hasPlagiarism ? 0 : 0 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+            <IconAlertTriangle size={20} color="#fff"/>
+            <Text style={styles.plagBannerText}>This response appears to be AI-generated.</Text>
+          </View>
+          <Pressable style={styles.plagDetailBtn} onPress={() => setAiSheetOpen(true)}>
+            <Text style={[styles.plagDetailBtnText, { color: colors.danger }]}>See Details</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* ── AI Detection bottom sheet ── */}
+      <BottomSheet visible={aiSheetOpen} onClose={() => setAiSheetOpen(false)}>
+        <Text style={[type.label, { marginBottom: 16, paddingHorizontal: 4, fontSize: 16 }]}>
+          AI Detection Result
+        </Text>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Score banner */}
+          <View style={[styles.plagSheetBanner, { backgroundColor: colors.danger }]}>
+            <IconAlertTriangle size={18} color="#fff"/>
+            <Text style={styles.plagSheetBannerText}>
+              We detected{' '}
+              <Text style={{ fontFamily: fonts.sansEb }}>{aiPct}%</Text>
+              {' '}AI usage in your response.
+            </Text>
+          </View>
+
+          {/* Sentence list */}
+          {(aiDoc?.sentences?.length ?? 0) > 0 && (
+            <>
+              <Text style={styles.aiSectionTitle}>Top sentences driving AI probability</Text>
+              {aiDoc!.sentences!.map((s, i) => (
+                <View key={i} style={[styles.aiSentenceRow, i < aiDoc!.sentences!.length - 1 && styles.aiSentenceDivider]}>
+                  <View style={styles.aiDot}/>
+                  <Text style={styles.aiSentenceText}>{s.sentence}</Text>
+                </View>
+              ))}
+            </>
+          )}
+          <View style={{ height: 16 }}/>
+        </ScrollView>
+      </BottomSheet>
 
       {/* ── Plagiarism detail bottom sheet ── */}
       <BottomSheet visible={plagiarismSheetOpen} onClose={() => setPlagiarismSheetOpen(false)}>
@@ -404,5 +456,22 @@ const styles = StyleSheet.create({
   },
   plagColText: {
     fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.textSecondary,
+  },
+
+  // AI Detection sentence list
+  aiSectionTitle: {
+    fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary,
+    marginBottom: 12, marginTop: 4,
+  },
+  aiSentenceRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 12,
+  },
+  aiSentenceDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline },
+  aiDot: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: colors.danger, marginTop: 4, flexShrink: 0,
+  },
+  aiSentenceText: {
+    flex: 1, fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: colors.textPrimary,
   },
 });
