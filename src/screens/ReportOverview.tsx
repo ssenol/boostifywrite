@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import Svg, { Circle as SvgCircle } from 'react-native-svg';
 
 import BottomSheet from '@/components/BottomSheet';
 import Card from '@/components/Card';
@@ -38,6 +39,59 @@ const RUBRIC_DESCRIPTIONS = [
   },
 ];
 
+function aiSentenceDots(aiScore: number | undefined): Array<{ bg: string; border: string }> {
+  const p = (aiScore ?? 0) * 100;
+  if (p >= 60) return [
+    { bg: colors.dangerSoft, border: colors.danger },
+    { bg: colors.dangerSoft, border: colors.danger },
+    { bg: colors.danger,     border: colors.danger },
+  ];
+  if (p >= 50) return [
+    { bg: '#fff',            border: colors.border  },
+    { bg: colors.dangerSoft, border: colors.danger  },
+    { bg: colors.danger,     border: colors.danger  },
+  ];
+  return [
+    { bg: '#fff',        border: colors.border  },
+    { bg: '#fff',        border: colors.border  },
+    { bg: colors.danger, border: colors.danger  },
+  ];
+}
+
+function ConfidenceRing({ label, value, fillColor }: { label: string; value: number; fillColor: string }) {
+  const SIZE = 88;
+  const SW   = 9;
+  const r    = (SIZE - SW) / 2;
+  const cx   = SIZE / 2;
+  const cy   = SIZE / 2;
+  const circ = 2 * Math.PI * r;
+  const pct    = Math.round(value * 100);
+  const filled = circ * Math.min(1, Math.max(0, value));
+
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <View style={{ width: SIZE, height: SIZE }}>
+        <Svg width={SIZE} height={SIZE}>
+          <SvgCircle cx={cx} cy={cy} r={r} fill="none" stroke={colors.border} strokeWidth={SW}/>
+          {pct > 0 && (
+            <SvgCircle
+              cx={cx} cy={cy} r={r} fill="none"
+              stroke={fillColor} strokeWidth={SW}
+              strokeDasharray={[filled, circ - filled]}
+              strokeLinecap="round"
+              rotation={-90} originX={cx} originY={cy}
+            />
+          )}
+        </Svg>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+          <Text style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.textTertiary, letterSpacing: 0.5 }}>{label.toUpperCase()}</Text>
+          <Text style={{ fontFamily: fonts.sansEb, fontSize: 16, color: fillColor, letterSpacing: -0.3 }}>{pct}%</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 type Props = { onTabChange: (tab: ResultsTab) => void };
 
 function criterionToConfig(criterion: string): { color: string; tab: ResultsTab } {
@@ -73,6 +127,7 @@ export function OverviewContent({ onTabChange }: Props) {
   const plagiarism  = getPlagiarismCheck(report.result);
   const aiDetection = getAiDetectionCheck(report.result);
   const aiDoc       = aiDetection?.document;
+  const aiConf      = aiDoc?.confidence_scores_raw?.identity;
   const aiPct       = aiDoc
     ? Math.round((aiDoc.completely_generated_prob ?? aiDoc.average_generated_prob ?? 1) * 100)
     : 100;
@@ -127,31 +182,73 @@ export function OverviewContent({ onTabChange }: Props) {
             </Text>
           </View>
 
-          {/* Sentence list */}
+          {/* High confidence statement */}
+          {aiDetection?.isAi && (
+            <>
+              <View style={styles.aiConfidenceRow}>
+                <View style={styles.aiCircleBadge}>
+                  <Text style={styles.aiCircleBadgeText}>AI</Text>
+                </View>
+                <Text style={styles.aiConfidenceText}>
+                  We are highly confident this text was AI generated
+                </Text>
+              </View>
+              <View style={styles.aiSheetDivider}/>
+            </>
+          )}
+
+          {/* Confidence scores — donut rings */}
+          {!!aiConf && (
+            <>
+              <Text style={styles.aiConfLabel}>Chance is entire text...</Text>
+              <View style={styles.aiConfRings}>
+                <ConfidenceRing label="AI"    value={aiConf.ai}    fillColor={colors.danger}     />
+                <ConfidenceRing label="Human" value={aiConf.human} fillColor={colors.brandGreen} />
+                <ConfidenceRing label="Mixed" value={aiConf.mixed} fillColor={colors.orange}     />
+              </View>
+              <View style={styles.aiSheetDivider}/>
+            </>
+          )}
+
+          {/* Advanced Sentence Scanning */}
           {(aiDoc?.sentences?.length ?? 0) > 0 && (
             <>
-              <Text style={styles.aiSectionTitle}>Top sentences driving AI probability</Text>
+              <Text style={styles.aiAdvTitle}>Advanced Sentence Scanning</Text>
+              <Text style={styles.aiAdvSubtitle}>Sentences most impacting the probability score.</Text>
+              <View style={styles.aiBarTrack}>
+                <View style={[styles.aiBarFill, { width: `${aiPct}%` }]}/>
+              </View>
+              <View style={styles.aiBarLabels}>
+                <Text style={styles.aiBarLabelText}>AI</Text>
+                <Text style={styles.aiBarLabelText}>Human</Text>
+              </View>
+              <View style={styles.aiSheetDivider}/>
+
+              <Text style={styles.aiSectionTitle}>Top Sentences Driving AI Probability</Text>
 
               {/* High Impact group header */}
               <View style={styles.aiImpactHeader}>
                 <View style={styles.aiDotsRow}>
-                  <View style={[styles.aiDotSm, { backgroundColor: '#fff', borderColor: colors.danger }]}/>
+                  <View style={[styles.aiDotSm, { backgroundColor: '#fff',            borderColor: colors.border  }]}/>
                   <View style={[styles.aiDotSm, { backgroundColor: colors.dangerSoft, borderColor: colors.danger }]}/>
-                  <View style={[styles.aiDotSm, { backgroundColor: colors.danger, borderColor: colors.danger }]}/>
+                  <View style={[styles.aiDotSm, { backgroundColor: colors.danger,     borderColor: colors.danger }]}/>
                 </View>
                 <Text style={styles.aiImpactLabel}>High Impact</Text>
               </View>
 
-              {aiDoc!.sentences!.map((s, i) => (
-                <View key={i} style={[styles.aiSentenceRow, i < aiDoc!.sentences!.length - 1 && styles.aiSentenceDivider]}>
-                  <View style={styles.aiDotsRow}>
-                    <View style={[styles.aiDotSm, { backgroundColor: 'transparent', borderColor: colors.border }]}/>
-                    <View style={[styles.aiDotSm, { backgroundColor: 'transparent', borderColor: colors.border }]}/>
-                    <View style={[styles.aiDotSm, { backgroundColor: colors.danger, borderColor: colors.danger }]}/>
+              {aiDoc!.sentences!.map((s, i) => {
+                const dots = aiSentenceDots(s.ai);
+                return (
+                  <View key={i} style={[styles.aiSentenceRow, i < aiDoc!.sentences!.length - 1 && styles.aiSentenceDivider]}>
+                    <View style={styles.aiDotsRow}>
+                      {dots.map((d, j) => (
+                        <View key={j} style={[styles.aiDotSm, { backgroundColor: d.bg, borderColor: d.border }]}/>
+                      ))}
+                    </View>
+                    <Text style={styles.aiSentenceText}>{s.sentence}</Text>
                   </View>
-                  <Text style={styles.aiSentenceText}>{s.sentence}</Text>
-                </View>
-              ))}
+                );
+              })}
             </>
           )}
           <View style={{ height: 16 }}/>
@@ -473,9 +570,55 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.textSecondary,
   },
 
+  // AI Detection — high confidence statement
+  aiConfidenceRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 4,
+  },
+  aiCircleBadge: {
+    width: 52, height: 52, borderRadius: radii.pill,
+    backgroundColor: colors.dangerSoft,
+    borderWidth: 1.5, borderColor: colors.danger,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  aiCircleBadgeText: {
+    fontFamily: fonts.sansEb, fontSize: 17, color: colors.danger, lineHeight: 22
+  },
+  aiConfidenceText: {
+    flex: 1, fontFamily: fonts.sansSb, fontSize: 15,
+    color: colors.textPrimary, lineHeight: 22,
+  },
+
+  // AI Detection — confidence scores + bar
+  aiConfLabel: {
+    fontFamily: fonts.sans, fontSize: 13, color: colors.textTertiary, marginBottom: 16,
+  },
+  aiConfRings: {
+    flexDirection: 'row', justifyContent: 'space-around',
+    paddingVertical: 8, marginBottom: 8,
+  },
+  aiSheetDivider: { height: 1, backgroundColor: colors.hairline, marginVertical: 16 },
+  aiAdvTitle: {
+    fontFamily: fonts.sansEb, fontSize: 16, color: colors.textPrimary, marginBottom: 4,
+  },
+  aiAdvSubtitle: {
+    fontFamily: fonts.sans, fontSize: 13, color: colors.textSecondary, marginBottom: 12,
+  },
+  aiBarTrack: {
+    height: 12, backgroundColor: colors.dangerSoft, borderRadius: radii.pill,
+    overflow: 'hidden', marginBottom: 6,
+  },
+  aiBarFill: {
+    position: 'absolute', left: 0, top: 0, bottom: 0,
+    backgroundColor: colors.danger, borderRadius: radii.pill,
+  },
+  aiBarLabels: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
+  aiBarLabelText: { fontFamily: fonts.sans, fontSize: 12, color: colors.textTertiary },
+
   // AI Detection sentence list
   aiSectionTitle: {
-    fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary,
+    fontFamily: fonts.sansEb, fontSize: 16, color: colors.textPrimary,
     marginBottom: 10, marginTop: 4,
   },
   aiImpactHeader: {
@@ -483,7 +626,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8, marginBottom: 2,
   },
   aiImpactLabel: {
-    fontFamily: fonts.sansSb, fontSize: 13, color: colors.textSecondary,
+    fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary,
   },
   aiDotsRow: {
     flexDirection: 'row', gap: 3, alignItems: 'center', flexShrink: 0, marginTop: 5

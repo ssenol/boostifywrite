@@ -55,7 +55,7 @@ export const colors = {
   warning:    '#C99016',
   orange:     '#F97316',
   danger:     '#DC2626',
-  dangerSoft: '#FEE2E2',
+  dangerSoft: '#ffd4d4',
   info:       '#1F94DC',
 } as const;
 

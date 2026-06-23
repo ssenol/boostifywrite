@@ -140,15 +140,25 @@ export function getOutlineCompliance(result: ReportResultEntry[]): OutlineSectio
 // result[2].result[0].result içindeki AI detection verisini döndürür
 export type AiSentence = {
   sentence:              string;
+  ai?:                   number;
   generated_prob?:       number;
   perplexity?:           number;
 };
 
+export type AiConfidenceScores = {
+  ai:    number;
+  human: number;
+  mixed: number;
+};
+
 export type AiDetectionDocument = {
-  predicted_class:        'ai' | 'human' | 'mixed' | string;
-  sentences?:             AiSentence[];
-  average_generated_prob?: number;
+  predicted_class:           'ai' | 'human' | 'mixed' | string;
+  sentences?:                AiSentence[];
+  average_generated_prob?:   number;
   completely_generated_prob?: number;
+  confidence_scores_raw?: {
+    identity?: AiConfidenceScores;
+  };
 };
 
 export type AiDetectionCheck = {
