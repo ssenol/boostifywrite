@@ -8,6 +8,7 @@ type RequestOptions = {
   body?: unknown;
   token?: string;           // exercise token gibi özel token geçmek için
   isFormData?: boolean;     // multipart/form-data (OCR) için
+  skipRefresh?: boolean;    // auth endpoint'leri için token yenilemeyi devre dışı bırak
 };
 
 async function refreshAndRetry<T>(path: string, options: RequestOptions): Promise<T> {
@@ -52,7 +53,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   });
 
   // 401: token yenilemeyi bir kez dene (sadece access token kullanan endpoint'lerde)
-  if (res.status === 401 && !options.token) {
+  if (res.status === 401 && !options.token && !options.skipRefresh) {
     return refreshAndRetry<T>(path, options);
   }
 

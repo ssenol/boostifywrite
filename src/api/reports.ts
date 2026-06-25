@@ -35,9 +35,9 @@ export async function fetchReportDetail(solvedTaskId: string): Promise<ReportDet
   });
 }
 
-export async function deleteReport(solvedTaskId: string): Promise<void> {
+export async function deleteReport(taskId: string, userId: string): Promise<void> {
   await request('/student/delete-solved-task', {
     method: 'POST',
-    body: { solvedTaskId, taskType: 'writing' },
+    body: { taskId, studentIds: [userId] },
   });
 }
