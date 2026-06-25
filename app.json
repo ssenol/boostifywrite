@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "boostifywrite",
+    "name": "BoostifyWrite",
     "slug": "boostifywrite",
     "version": "1.0.0",
+    "owner": "selcuksenol",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "boostifywrite",
@@ -14,22 +15,43 @@
       "backgroundColor": "#EFF0FA"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.boostify.write"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ues.boostifywrite",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "BoostifyWrite uses Face ID to provide secure and convenient login for student accounts.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#EFF0FA"
       },
-      "package": "com.boostify.write"
+      "package": "com.ues.boostifywrite",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro"
     },
     "plugins": [
       "expo-font",
-      "expo-asset"
-    ]
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "BoostifyWrite uses photo library access to allow students to select and upload profile photos for their educational account.",
+          "cameraPermission": "BoostifyWrite uses camera access to allow students to capture and upload profile photos for their educational account."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fb90bd8f-f11f-4c9b-bfeb-e312a868a6e3"
+      }
+    }
   }
 }
