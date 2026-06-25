@@ -34,7 +34,7 @@ export type RefreshTokenResponse = {
   message: string;
   data: {
     accessToken: string;
-    user: Omit<User, 'createdAt' | 'avatarUrl'>;
+    user: Omit<User, 'createdAt'>;
   };
 };
 

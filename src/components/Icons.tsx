@@ -147,6 +147,43 @@ export const IconAlertTriangle = ({ size = 20, color = '#fff' }: P) => (
   </Svg>
 );
 
+// Trash — Lucide trash-2
+export const IconTrash = ({ size = 20, color = '#000' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6m5 5v6m4-6v6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+// Face ID — Lucide scan-face
+export const IconFaceId = ({ size = 24, color = '#000' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2m5-3s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+// Touch ID — Lucide fingerprint
+export const IconTouchId = ({ size = 24, color = '#000' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4M14 13.12c0 2.38 0 6.38-1 8.88m4.29-.98c.12-.6.43-2.3.5-3.02M2 12a10 10 0 0 1 18-6M2 16h.01m19.79 0c.2-2 .131-5.354 0-6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2m2.31 12c.21-.66.45-1.32.57-2M9 6.8a6 6 0 0 1 9 5.2v2" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+// ScanText — Lucide scan-text (OCR / el yazısı)
+export const IconScanText = ({ size = 24, color = '#000' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8h8M7 12h10M7 16h6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
+// Camera — Lucide camera
+export const IconCamera = ({ size = 24, color = '#000' }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Circle cx={12} cy={13} r={3} stroke={color} strokeWidth={2}/>
+  </Svg>
+);
+
 // Convenience map
 export const TabIcon = {
   Home: IconHomeTab, Assignments: IconWriteTab, Report: IconProgressTab, Profile: IconProfileTab,

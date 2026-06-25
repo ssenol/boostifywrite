@@ -33,6 +33,10 @@ export async function updateAccessToken(token: string) {
   await AsyncStorage.setItem(KEYS.accessToken, token);
 }
 
+export async function updateUser(user: User) {
+  await AsyncStorage.setItem(KEYS.user, JSON.stringify(user));
+}
+
 export async function clearAuth() {
   await AsyncStorage.multiRemove([KEYS.accessToken, KEYS.refreshToken, KEYS.user]);
 }

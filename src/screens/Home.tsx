@@ -132,7 +132,7 @@ export default function Home() {
           </Text>
           <Text style={styles.greeting}>Hi, {firstName}.</Text>
         </View>
-        <Avatar initials={initials} onPress={() => (nav.getParent() as any)?.navigate('ProfileStack')}/>
+        <Avatar initials={initials} avatarUrl={user?.avatarUrl} onPress={() => (nav.getParent() as any)?.navigate('ProfileStack')}/>
       </View>
 
       <ScreenScroll
