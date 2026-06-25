@@ -5,12 +5,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 
 import { ScreenSurface } from '@/components/Screen';
 import IconButton from '@/components/IconButton';
 import ProgressBar from '@/components/ProgressBar';
-import { IconChevLeft, IconCheck, IconArrow, IconChevDown } from '@/components/Icons';
-import { fetchTaskContent, submitWriting } from '@/api';
+import BottomSheet from '@/components/BottomSheet';
+import { IconChevLeft, IconCheck, IconArrow, IconChevDown, IconScanText } from '@/components/Icons';
+import { fetchTaskContent, submitWriting, imageToText } from '@/api';
 import HtmlText from '@/components/HtmlText';
 import { colors, fonts, radii, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
@@ -39,11 +41,12 @@ export default function Writing() {
   const meta = ex.assignmentMetaData.details;
 
   const scrollRef   = useRef<ScrollView>(null);
+  const inputRef    = useRef<TextInput>(null);
   const panY        = useRef(new Animated.Value(0)).current;
   const expandAnim  = useRef(new Animated.Value(1)).current; // 1=açık, 0=kapalı
   const expandedRef = useRef(true);
 
-  const peekMaxHeight    = expandAnim.interpolate({ inputRange: [0, 1], outputRange: [76, 320] });
+  const peekMaxHeight    = expandAnim.interpolate({ inputRange: [0, 1], outputRange: [76, 220] });
   const chevronRotation  = expandAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '0deg'] });
 
   function animateExpand(toExpanded: boolean) {
@@ -92,8 +95,8 @@ export default function Writing() {
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  // peek sheet güncel yüksekliği (maxHeight değerleri)
-  const peekHeight = expanded ? 320 : 72;
+  // peek sheet güncel yüksekliği — animasyon outputRange ile eşleşmeli
+  const peekHeight = expanded ? 220 : 76;
   // Klavye açıkken safe area gerek yok (klavye kaplar), kapalıyken home indicator için ekle
   const barPaddingBottom = keyboardHeight > 0 ? 12 : Math.max(20, insets.bottom + 10);
   const barHeight        = 12 + 48 + barPaddingBottom;
@@ -104,6 +107,8 @@ export default function Writing() {
   const [question,   setQuestion]   = useState<ExerciseQuestion | null>(null);
   const [loadingQ,   setLoadingQ]   = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showOcrSheet,  setShowOcrSheet]  = useState(false);
+  const [ocrProcessing, setOcrProcessing] = useState(false);
 
   const wordCount = countWords(text);
   const minWords  = meta.minWordCount ?? 0;
@@ -133,8 +138,87 @@ export default function Writing() {
       .finally(() => setLoadingQ(false));
   }, [exerciseToken]);
 
+  const handleTextChange = (newText: string) => {
+    if (maxWords > 0 && countWords(newText) > maxWords) {
+      // Orijinal metindeki whitespace/satır sonlarını koruyarak maxWords'üncü
+      // kelimenin bittiği konumu bul, sonrasını kes
+      let count = 0;
+      let i = 0;
+      while (i < newText.length) {
+        while (i < newText.length && /\s/.test(newText[i])) i++;
+        if (i >= newText.length) break;
+        count++;
+        while (i < newText.length && !/\s/.test(newText[i])) i++;
+        if (count === maxWords) break;
+      }
+      setText(newText.slice(0, i));
+      return;
+    }
+    setText(newText);
+  };
+
+  // Yazı varken geri dönmeye çalışınca onay iste
+  useEffect(() => {
+    const unsubscribe = nav.addListener('beforeRemove', (e) => {
+      if (text.trim().length === 0 || submitting) return;
+      e.preventDefault();
+      Alert.alert(
+        'Discard draft?',
+        'You have unsaved text. Going back will discard your writing.',
+        [
+          { text: 'Keep writing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => nav.dispatch(e.data.action) },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [nav, text, submitting]);
+
   const toggle = (id: string) =>
     setDone(d => d.includes(id) ? d.filter(x => x !== id) : [...d, id]);
+
+  const pickAndOcr = async (source: 'camera' | 'library') => {
+    setShowOcrSheet(false);
+    await new Promise(resolve => setTimeout(resolve, 350));
+
+    const perm = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!perm.granted) {
+      Alert.alert(
+        'Permission required',
+        source === 'camera'
+          ? 'Camera access is needed to take a photo.'
+          : 'Photo library access is needed to choose a photo.',
+      );
+      return;
+    }
+
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 0.9 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 0.9 });
+
+    if (result.canceled) return;
+
+    setShowOcrSheet(true);
+    setOcrProcessing(true);
+    let failed = false;
+    try {
+      const ocrText = await imageToText(result.assets[0].uri);
+      const combined = text + (text ? '\n' : '') + ocrText;
+      handleTextChange(combined);
+    } catch {
+      failed = true;
+    } finally {
+      setOcrProcessing(false);
+      setShowOcrSheet(false);
+    }
+    // Modal kapandıktan sonra alert göster — modal açıkken Alert çakışma yaratıyor
+    if (failed) {
+      setTimeout(() => Alert.alert('Could not read image', 'Please try again with a clearer photo.'), 350);
+    }
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -156,10 +240,13 @@ export default function Writing() {
     ? meta.keywords.split(',').map(k => k.trim()).filter(Boolean)
     : [];
 
+  const textLower = text.toLowerCase();
+  const usedKeywords = new Set(keywords.filter(k => textLower.includes(k.toLowerCase())));
+
   return (
     <ScreenSurface edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
+      <Pressable style={styles.header} onPress={() => Keyboard.dismiss()}>
         <IconButton onPress={() => nav.goBack()}>
           <IconChevLeft size={18} color={colors.textPrimary}/>
         </IconButton>
@@ -174,7 +261,7 @@ export default function Writing() {
             <Text style={styles.timerText}>{mm}:{ss}</Text>
           </View>
         )}
-      </View>
+      </Pressable>
 
       {/* Yazı alanı — peek + bar kadar marginBottom, içerik büyüdükçe otomatik scroll */}
       <ScrollView
@@ -185,21 +272,30 @@ export default function Writing() {
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
       >
-        <TextInput
-          multiline
-          scrollEnabled={false}
-          style={styles.bodyText}
-          textAlignVertical="top"
-          placeholder="Start writing here…"
-          placeholderTextColor={colors.textTertiary}
-          value={text}
-          onChangeText={setText}
-          editable={!submitting}
-        />
+        <View>
+          <TextInput
+            ref={inputRef}
+            multiline
+            scrollEnabled={false}
+            style={styles.bodyText}
+            textAlignVertical="top"
+            placeholder="Start writing here…"
+            placeholderTextColor={colors.textTertiary}
+            value={text}
+            onChangeText={handleTextChange}
+            editable={!submitting}
+          />
+          {keyboardHeight === 0 && !submitting && (
+            <Pressable
+              style={StyleSheet.absoluteFillObject}
+              onPress={() => inputRef.current?.focus()}
+            />
+          )}
+        </View>
       </ScrollView>
 
       {/* Peek sheet */}
-      <Animated.View style={[styles.peek, { maxHeight: peekMaxHeight, overflow: 'hidden', bottom: barBottom + barHeight, transform: [{ translateY: panY }] }]}>
+      <Animated.View style={[styles.peek, { height: peekMaxHeight, bottom: barBottom + barHeight, transform: [{ translateY: panY }] }]}>
         {/* Sürükleme bölgesi: handle + sekme satırı — içerik scroll'uyla çakışmaz */}
         <View {...panResponder.panHandlers}>
           <Pressable onPress={() => { Keyboard.dismiss(); animateExpand(!expandedRef.current); }} style={styles.peekHandle}/>
@@ -239,43 +335,42 @@ export default function Writing() {
           </View>
         </View>
 
-        <View style={{ marginTop: 14 }}>
+        <ScrollView
+          style={{ flex: 1, marginTop: 14 }}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 12 }}
+        >
           {tab === 'Outline' && (
             outlines.length === 0 ? (
               <Text style={styles.emptyHint}>No structure guide for this assignment.</Text>
             ) : (
-              <ScrollView
-                style={{ maxHeight: 200 }}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled
-                contentContainerStyle={{ paddingBottom: 12 }}
-              >
-                {outlines.map((o, i) => {
-                  const isDone = done.includes(o.id);
-                  const isLast = i === outlines.length - 1;
-                  return (
-                    <Pressable key={o.id} onPress={() => toggle(o.id)} style={[
-                      styles.outlineRow,
-                      !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
-                    ]}>
-                      <View style={[styles.checkbox, isDone && { backgroundColor: colors.brandGreen, borderWidth: 0 }]}>
-                        {isDone && <IconCheck size={12} color="#fff"/>}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[
-                          styles.outlineLabel,
-                          isDone && { textDecorationLine: 'line-through' },
-                        ]}>{o.label}</Text>
-                        {!!o.purpose && (
-                          <Text style={[styles.outlinePurpose, isDone && { color: colors.textDisabled }]}>
-                            {o.purpose}
-                          </Text>
-                        )}
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+              outlines.map((o, i) => {
+                const isDone = done.includes(o.id);
+                const isLast = i === outlines.length - 1;
+                return (
+                  <Pressable key={o.id} onPress={() => toggle(o.id)} style={[
+                    styles.outlineRow,
+                    !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline },
+                  ]}>
+                    <View style={[styles.checkbox, isDone && { backgroundColor: colors.brandGreen, borderWidth: 0 }]}>
+                      {isDone && <IconCheck size={12} color="#fff"/>}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[
+                        styles.outlineLabel,
+                        isDone && { textDecorationLine: 'line-through' },
+                      ]}>{o.label}</Text>
+                      {!!o.purpose && (
+                        <Text style={[styles.outlinePurpose, isDone && { color: colors.textDisabled }]}>
+                          {o.purpose}
+                        </Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })
             )
           )}
           {tab === 'Prompt' && (
@@ -290,18 +385,21 @@ export default function Writing() {
             keywords.length === 0
               ? <Text style={styles.emptyHint}>No vocabulary hints for this assignment.</Text>
               : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 12 }}>
-                  {keywords.map(k => (
-                    <View key={k} style={styles.vocabChip}>
-                      <Text style={styles.vocabText}>{k}</Text>
-                    </View>
-                  ))}
+                  {keywords.map(k => {
+                    const used = usedKeywords.has(k);
+                    return (
+                      <View key={k} style={[styles.vocabChip, used && styles.vocabChipUsed]}>
+                        <Text style={[styles.vocabText, used && styles.vocabTextUsed]}>{k}</Text>
+                      </View>
+                    );
+                  })}
                 </View>
           )}
-        </View>
+        </ScrollView>
       </Animated.View>
 
       {/* Alt çubuk: kelime sayısı + gönder */}
-      <View style={[styles.bottomBar, { bottom: barBottom, paddingBottom: barPaddingBottom }]}>
+      <Pressable style={[styles.bottomBar, { bottom: barBottom, paddingBottom: barPaddingBottom }]} onPress={() => Keyboard.dismiss()}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
             <Text style={[
@@ -322,6 +420,13 @@ export default function Writing() {
             />
           </View>
         </View>
+        <IconButton
+          size={44}
+          onPress={() => setShowOcrSheet(true)}
+          style={styles.ocrBtn}
+        >
+          <IconScanText size={20} color={colors.textSecondary}/>
+        </IconButton>
         <Pressable
           onPress={handleSubmit}
           disabled={submitting || wordCount < minWords}
@@ -336,7 +441,39 @@ export default function Writing() {
             </>
           )}
         </Pressable>
-      </View>
+      </Pressable>
+
+      {/* OCR / El yazısı bottom sheet */}
+      <BottomSheet
+        visible={showOcrSheet}
+        onClose={ocrProcessing ? () => {} : () => setShowOcrSheet(false)}
+        maxHeight="45%"
+      >
+        {ocrProcessing ? (
+          <View style={styles.ocrProcessing}>
+            <ActivityIndicator size="large" color={colors.brandBlue}/>
+            <Text style={styles.ocrProcessingTitle}>Reading your handwriting…</Text>
+            <Text style={styles.ocrProcessingSpot}>This usually takes 2–6 seconds.</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.ocrSheetHeader}>
+              <Text style={styles.ocrSheetTitle}>Handwritten draft</Text>
+              <Text style={styles.ocrSheetSpot}>
+                Take a photo or upload an image of your handwritten text. It will be converted and added to your essay — you can review and edit before submitting.
+              </Text>
+            </View>
+            <View style={styles.ocrSheetActions}>
+              <Pressable style={[styles.ocrSheetRow, styles.ocrSheetDivider]} onPress={() => pickAndOcr('camera')}>
+                <Text style={styles.ocrSheetRowText}>Take a photo</Text>
+              </Pressable>
+              <Pressable style={styles.ocrSheetRow} onPress={() => pickAndOcr('library')}>
+                <Text style={styles.ocrSheetRowText}>Choose from library</Text>
+              </Pressable>
+            </View>
+          </>
+        )}
+      </BottomSheet>
     </ScreenSurface>
   );
 }
@@ -397,7 +534,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill,
     backgroundColor: colors.brandBlueSoft,
   },
+  vocabChipUsed: { backgroundColor: colors.bgCardTint },
   vocabText: { fontFamily: fonts.sansSb, fontSize: 13, color: colors.brandBlue },
+  vocabTextUsed: { color: colors.textDisabled, textDecorationLine: 'line-through' },
 
   bottomBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -415,4 +554,45 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   submitText: { fontFamily: fonts.sansSb, fontSize: 15, color: '#fff' },
+
+  ocrBtn: {
+    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.bgCard,
+  },
+
+  ocrProcessing: {
+    paddingVertical: 32, alignItems: 'center', gap: 14,
+  },
+  ocrProcessingTitle: {
+    fontFamily: fonts.sansSb, fontSize: 17, color: colors.textPrimary,
+  },
+  ocrProcessingSpot: {
+    fontFamily: fonts.sans, fontSize: 13, color: colors.textSecondary,
+  },
+
+  ocrSheetHeader: {
+    paddingBottom: 20,
+    borderBottomWidth: 1, borderBottomColor: colors.hairline,
+  },
+  ocrSheetTitle: {
+    fontFamily: fonts.sansSb, fontSize: 18, color: colors.textPrimary, marginBottom: 4,
+  },
+  ocrSheetSpot: {
+    fontFamily: fonts.sans, fontSize: 13, color: colors.textSecondary, lineHeight: 19,
+  },
+  ocrSheetActions: {
+    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.lg, overflow: 'hidden',
+    marginTop: 16,
+  },
+  ocrSheetRow: {
+    paddingVertical: 15, paddingHorizontal: 16,
+    backgroundColor: colors.bgCard,
+  },
+  ocrSheetDivider: {
+    borderBottomWidth: 1, borderBottomColor: colors.hairline,
+  },
+  ocrSheetRowText: {
+    fontFamily: fonts.sansSb, fontSize: 15, color: colors.textPrimary,
+  },
 });
