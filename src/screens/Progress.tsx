@@ -1,28 +1,39 @@
 // Progress — gerçek tamamlanan raporlar + statik CEFR chart
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 
 import { ScreenSurface, ScreenScroll } from '@/components/Screen';
 import CompletedTaskCard from '@/components/CompletedTaskCard';
 import SectionHeader from '@/components/SectionHeader';
+import SwipeableRow from '@/components/SwipeableRow';
 import { useAuth } from '@/context/AuthContext';
-import { fetchCompletedReports } from '@/api';
-import { colors, fonts, radii, type } from '@/theme';
+import { fetchCompletedReports, deleteReport, fetchReportDetail } from '@/api';
+import { colors, fonts, radii, spacing, type } from '@/theme';
 import type { CompletedExercise } from '@/types/api';
 import type { ReportStackParamList } from '@/navigation/types';
 
+const POLL_INTERVAL = 20_000;
+
 export default function Progress() {
   const { user } = useAuth();
-  const nav = useNavigation<NativeStackNavigationProp<ReportStackParamList>>();
+  const nav   = useNavigation<NativeStackNavigationProp<ReportStackParamList>>();
+  const route = useRoute<RouteProp<ReportStackParamList, 'Report'>>();
 
   const [exercises,  setExercises]  = useState<CompletedExercise[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error,      setError]      = useState<string | null>(null);
   const lastLoadTime = useRef<number>(0);
-  const CACHE_DURATION = 60 * 60 * 1000; // 1 saat
+  const CACHE_DURATION = 60 * 60 * 1000;
+
+  // Bekleyen değerlendirme
+  const [pendingId,   setPendingId]   = useState<string | null>(null);
+  const [pendingName, setPendingName] = useState<string>('');
+  const [pendingDots, setPendingDots] = useState('');
+  const pendingIdRef = useRef<string | null>(null);
 
   const load = useCallback(async (isRefresh = false, force = false) => {
     if (!user) return;
@@ -48,7 +59,77 @@ export default function Progress() {
     }
   }, [user, CACHE_DURATION]);
 
+  // İlk yüklemede spinner göster
   useEffect(() => { load(); }, [load]);
+
+  // Route params'tan pending task al (Evaluating'den yönlendirme)
+  useEffect(() => {
+    const params = route.params;
+    if (!params?.pendingSolvedTaskId) return;
+    setPendingId(params.pendingSolvedTaskId);
+    setPendingName(params.pendingTaskName ?? '');
+    pendingIdRef.current = params.pendingSolvedTaskId;
+  }, [route.params]);
+
+  // Pending varken 20sn'de bir sonuç kontrol et
+  useEffect(() => {
+    if (!pendingId) return;
+    const poll = async () => {
+      try {
+        const res = await fetchReportDetail(pendingId);
+        if (res.data.mainScore > 0) {
+          setPendingId(null);
+          pendingIdRef.current = null;
+          load(true);
+        }
+      } catch {}
+    };
+    poll();
+    const timer = setInterval(poll, POLL_INTERVAL);
+    return () => clearInterval(timer);
+  }, [pendingId]);
+
+  // Pending varken nokta animasyonu
+  useEffect(() => {
+    if (!pendingId) return;
+    const t = setInterval(() => setPendingDots(d => d.length >= 3 ? '' : d + '.'), 600);
+    return () => clearInterval(t);
+  }, [pendingId]);
+
+  // Sonraki odaklanmalarda sessiz yenileme (ör. yeni rapor submit edildi, geri döndü)
+  const hasMounted = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasMounted.current) { hasMounted.current = true; return; }
+      load(true);
+    }, [load])
+  );
+
+  const handleDelete = (exercise: CompletedExercise) => {
+    const bestAttempt = exercise.attempts[0];
+    if (!bestAttempt) return;
+
+    Alert.alert(
+      'Delete report',
+      `"${exercise.taskName}" will be permanently deleted.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            setExercises(prev => prev.filter(ex => ex.assignedTaskId !== exercise.assignedTaskId));
+            try {
+              await deleteReport(bestAttempt.solvedTaskId, user!.userId);
+            } catch (err) {
+              setExercises(prev => [...prev, exercise]);
+              const msg = err instanceof Error ? err.message : 'Could not delete the report.';
+              Alert.alert('Delete failed', msg);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   if (loading) {
     return (
@@ -77,6 +158,22 @@ export default function Progress() {
           />
         }
       >
+        {/* Değerlendirme bekleyen */}
+        {pendingId && (
+          <View style={{ marginBottom: 16 }}>
+            <SectionHeader label="EVALUATING"/>
+            <View style={styles.pendingCard}>
+              <View style={styles.pendingSpinner}>
+                <ActivityIndicator size="small" color={colors.brandBlue}/>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pendingStatus}>Analysing your essay{pendingDots}</Text>
+                <Text style={styles.pendingName} numberOfLines={2}>{pendingName}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Tamamlananlar */}
         <View>
           <SectionHeader label="COMPLETED"/>
@@ -84,20 +181,28 @@ export default function Progress() {
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
-          ) : exercises.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>No completed essays yet.</Text>
-            </View>
+          ) : exercises.filter(e => e.attempts[0]?.solvedTaskId !== pendingId).length === 0 ? (
+            !pendingId && (
+              <View style={styles.empty}>
+                <Text style={styles.emptyText}>No completed essays yet.</Text>
+              </View>
+            )
           ) : (
             <View style={{ gap: 8 }}>
-              {exercises.map((e) => {
+              {exercises.filter(e => e.attempts[0]?.solvedTaskId !== pendingId).map((e) => {
                 const bestAttempt = e.attempts[0];
-                return (
+                const card = (
                   <CompletedTaskCard
                     key={e.assignedTaskId}
                     exercise={e}
                     onPress={() => bestAttempt && nav.navigate('Results', { solvedTaskId: bestAttempt.solvedTaskId })}
                   />
+                );
+                if (!__DEV__) return card;
+                return (
+                  <SwipeableRow key={e.assignedTaskId} onDelete={() => handleDelete(e)}>
+                    {card}
+                  </SwipeableRow>
                 );
               })}
             </View>
@@ -120,4 +225,24 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.danger },
   empty:     { alignItems: 'center', paddingVertical: 40 },
   emptyText: { fontFamily: fonts.sans, fontSize: 16, color: colors.textTertiary },
+
+  pendingCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.s3,
+    backgroundColor: colors.bgCard,
+    borderWidth: 1, borderColor: colors.brandBlueSoft,
+    borderRadius: radii.md,
+    padding: spacing.s4,
+  },
+  pendingSpinner: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.brandBlueSoft,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pendingStatus: {
+    fontFamily: fonts.mono, fontSize: 11, color: colors.brandBlue,
+    marginBottom: 3, letterSpacing: 0.3,
+  },
+  pendingName: {
+    fontFamily: fonts.sansSb, fontSize: 14, color: colors.textPrimary,
+  },
 });

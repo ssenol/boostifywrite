@@ -1,6 +1,6 @@
 // 05 · Evaluating — gerçek API polling + animasyon
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,7 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenSurface } from '@/components/Screen';
 import Card from '@/components/Card';
 import ProgressRing from '@/components/ProgressRing';
-import { IconCheckFilled } from '@/components/Icons';
+import { IconCheckFilled, IconArrow } from '@/components/Icons';
 import { fetchReportDetail } from '@/api';
 import { colors, fonts, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
@@ -30,8 +30,11 @@ export default function Evaluating() {
   const route = useRoute<Route>();
   const { solvedTaskId, taskName, wordCount } = route.params;
 
-  const [pct,       setPct]       = useState(0);
+  const [pct,      setPct]     = useState(0);
+  const [overdue,  setOverdue] = useState(false);
+  const [dots,     setDots]    = useState('');
   const finishedRef = useRef(false);
+  const breathAnim  = useRef(new Animated.Value(1)).current;
 
   const submittedAt = new Date().toLocaleTimeString('en-US', {
     hour: 'numeric', minute: '2-digit',
@@ -78,8 +81,36 @@ export default function Evaluating() {
     return () => clearInterval(t);
   }, []);
 
+  // 18s sonra "taking longer" moduna geç
+  useEffect(() => {
+    const t = setTimeout(() => setOverdue(true), 18_000);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Overdue → nokta animasyonu
+  useEffect(() => {
+    if (!overdue || pct >= 100) return;
+    const t = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
+    return () => clearInterval(t);
+  }, [overdue, pct]);
+
+  // Overdue → nefes alma
+  useEffect(() => {
+    if (!overdue || pct >= 100) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathAnim, { toValue: 0.4, duration: 900, useNativeDriver: true }),
+        Animated.timing(breathAnim, { toValue: 1,   duration: 900, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [overdue, pct]);
+
   // Gerçek API polling
   useEffect(() => {
+    const parent = nav.getParent<any>();
+
     const poll = async () => {
       if (finishedRef.current) return;
       try {
@@ -87,7 +118,18 @@ export default function Evaluating() {
         if (res.data.mainScore > 0) {
           finishedRef.current = true;
           setPct(100);
-          setTimeout(() => nav.replace('Results', { solvedTaskId }), 1200);
+          setTimeout(() => {
+            // Tab navigator üzerinden ReportStack → Results'a git.
+            // Böylece geri butonu doğal olarak Progress'e döner.
+            if (parent) {
+              parent.navigate('ReportStack', {
+                screen: 'Results',
+                params: { solvedTaskId },
+              });
+            } else {
+              nav.replace('Results', { solvedTaskId });
+            }
+          }, 1200);
         }
       } catch {
         // Sessizce yeniden dene
@@ -98,6 +140,15 @@ export default function Evaluating() {
     const timer = setInterval(poll, POLL_MS);
     return () => clearInterval(timer);
   }, [solvedTaskId, nav]);
+
+  const handleViewReports = () => {
+    finishedRef.current = true; // Evaluating polling'ini durdur
+    const parent = nav.getParent<any>();
+    parent?.navigate('ReportStack', {
+      screen: 'Report',
+      params: { pendingSolvedTaskId: solvedTaskId, pendingTaskName: taskName },
+    });
+  };
 
   return (
     <ScreenSurface style={{ backgroundColor: '#ECEDFB' }}>
@@ -118,20 +169,35 @@ export default function Evaluating() {
 
         {/* Merkez progress */}
         <View style={styles.hero}>
-          <View style={{ position: 'relative' }}>
+          <Animated.View style={{ position: 'relative', opacity: overdue && pct < 100 ? breathAnim : 1 }}>
             <ProgressRing value={pct} size={150} stroke={5} color={colors.brandBlue}/>
             <View style={styles.pctWrap}>
               <Text style={styles.pctText}>{pct}%</Text>
             </View>
-          </View>
+          </Animated.View>
           <Text style={styles.heroTitle}>
-            {pct >= 100 ? 'Evaluation complete!' : 'Reading your essay…'}
+            {pct >= 100
+              ? 'Evaluation complete!'
+              : overdue
+              ? `Still working${dots}`
+              : 'Reading your essay…'}
           </Text>
           <Text style={styles.heroSubtitle}>
-            Evaluating against 4 rubric dimensions.{'\n'}
-            This usually takes about 30 seconds.
+            {pct >= 100
+              ? ''
+              : overdue
+              ? `Taking a bit longer than usual.${'\n'}Hang tight, almost there!`
+              : `Evaluating against 4 rubric dimensions.${'\n'}This usually takes about 30 seconds.`}
           </Text>
         </View>
+
+        {/* Reports linki */}
+        {pct < 100 && (
+          <Pressable style={styles.viewReports} onPress={handleViewReports}>
+            <Text style={styles.viewReportsText}>Go to reports</Text>
+            <IconArrow size={13} color={colors.textSecondary}/>
+          </Pressable>
+        )}
 
         {/* Kontrol listesi */}
         <Card padding={16}>
@@ -196,4 +262,10 @@ const styles = StyleSheet.create({
   radioDot: { width: 8, height: 8, borderRadius: 4 },
   itemLabel:  { flex: 1, fontSize: 14.5 },
   itemStatus: { fontFamily: fonts.mono, fontSize: 12 },
+
+  viewReports: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 14,
+  },
+  viewReportsText: { fontFamily: fonts.sansSb, fontSize: 14, color: colors.textSecondary },
 });

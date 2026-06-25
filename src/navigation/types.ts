@@ -53,7 +53,7 @@ export type AssignmentsStackParamList = {
 };
 
 export type ReportStackParamList = {
-  Report:   undefined;
+  Report:   { pendingSolvedTaskId?: string; pendingTaskName?: string } | undefined;
   Results:  ResultParams;
 };
 export type ProfileStackParamList = { Profile: undefined };
