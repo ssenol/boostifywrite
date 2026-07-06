@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 
 import Card from '@/components/Card';
 import LevelBadge from '@/components/LevelBadge';
 import { IconChevRight } from '@/components/Icons';
-import { colors, fonts, levelColor } from '@/theme';
+import { colors, fonts, radii, levelColor } from '@/theme';
 import type { AssignedExercise } from '@/types/api';
 
 function capitalize(str: string): string {
@@ -25,10 +25,14 @@ export default function AssignmentCard({ exercise: ex, onPress }: Props) {
   const meta        = ex.assignmentMetaData.details;
   const due         = formatDue(ex.dueDate);
   const accentColor = levelColor(meta.cefrLevel).fg;
+  const hasBanner   = !!ex.coverImage;
 
   return (
-    <Card accent={accentColor} padding={16} onPress={onPress}>
-      <View style={styles.row}>
+    <Card accent={accentColor} padding={hasBanner ? 0 : 16} onPress={onPress}>
+      {hasBanner && (
+        <Image source={{ uri: ex.coverImage }} style={styles.banner} resizeMode="cover"/>
+      )}
+      <View style={[styles.row, hasBanner && styles.rowPadded]}>
         <View style={{ flex: 1, marginLeft: 6 }}>
           <View style={styles.chipsRow}>
             <LevelBadge level={meta.cefrLevel} size="sm"/>
@@ -56,7 +60,13 @@ export default function AssignmentCard({ exercise: ex, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
+  banner: {
+    width: '100%', height: 132,
+    borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg,
+    backgroundColor: colors.bgCardTint,
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rowPadded: { padding: 16 },
   chipsRow: { flexDirection: 'row', alignItems: 'center', columnGap: 10, rowGap: 8, flexWrap: 'wrap' },
   chipType: { fontFamily: fonts.sans, fontSize: 12, color: colors.textSecondary },
   chipDot:  { color: colors.textTertiary },
