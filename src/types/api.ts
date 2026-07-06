@@ -311,6 +311,72 @@ export type ReportDetailResponse = {
   message: string;
 };
 
+// ── Self Analytics (2.8) ───────────────────────────────────
+export type SelfAnalyticsScoreTrendPoint = {
+  taskName: string;
+  wordCount: number;
+  score: number;
+  cefr: string;
+  date: string;
+};
+
+export type SelfAnalyticsCriterionAverage = {
+  samples: number;
+  criterion: string;
+  avg: number;
+};
+
+export type SelfAnalyticsOutlineSection = {
+  samples: number;
+  essay: string;
+  section: string;
+  avg: number;
+};
+
+export type SelfAnalyticsErrorCount = { count: number; type: string };
+export type SelfAnalyticsErrorSubType = { count: number; subType: string };
+export type SelfAnalyticsUpgradeSuggestion = { count: number; suggestions: string[]; from: string };
+export type SelfAnalyticsCefrCount = { count: number; cefr: string };
+
+export type SelfAnalyticsWriting = {
+  kpis: {
+    submissions: number;
+    avgScore: number;
+    bestScore: number;
+    totalWords: number;
+    avgWordCount: number;
+    totalErrors: number;
+    aiFlagged: number;
+    plagiarismFlagged: number;
+  };
+  scoreTrend: SelfAnalyticsScoreTrendPoint[];
+  criteriaAverages: SelfAnalyticsCriterionAverage[];
+  outlineMastery: SelfAnalyticsOutlineSection[];
+  errorBreakdown: SelfAnalyticsErrorCount[];
+  topErrorSubTypes: SelfAnalyticsErrorSubType[];
+  keywordPerformance: {
+    used: number;
+    required: number;
+    rate: number;
+    mostMissed: { missedCount: number; keyword: string }[];
+    mostUsed: { usedCount: number; keyword: string }[];
+  };
+  topUpgradesToLearn: SelfAnalyticsUpgradeSuggestion[];
+  cefrSnapshot: SelfAnalyticsCefrCount[];
+};
+
+export type SelfAnalyticsResponse = {
+  status: string;
+  status_code: number;
+  successed?: boolean;
+  data: {
+    modules: Record<string, boolean>;
+    filters: { dateFrom: string | null; dateTo: string | null };
+    writing?: SelfAnalyticsWriting;
+  };
+  message: string;
+};
+
 // ── Standart hata ─────────────────────────────────────────
 export type ApiError = {
   status: 'fail';

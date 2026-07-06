@@ -4,3 +4,4 @@ export * from './auth';
 export * from './exercises';
 export * from './submission';
 export * from './reports';
+export * from './analytics';

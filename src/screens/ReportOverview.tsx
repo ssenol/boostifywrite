@@ -94,7 +94,7 @@ function ConfidenceRing({ label, value, fillColor }: { label: string; value: num
 
 type Props = { onTabChange: (tab: ResultsTab) => void };
 
-function criterionToConfig(criterion: string): { color: string; tab: ResultsTab } {
+export function criterionToConfig(criterion: string): { color: string; tab: ResultsTab } {
   const c = criterion.toLowerCase();
   if (c.includes('task') || c.includes('content') || c.includes('fulfil'))
     return { color: colors.rubricTask, tab: 'Content & Fulfillment' };
