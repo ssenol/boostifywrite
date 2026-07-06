@@ -5,12 +5,13 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ScreenSurface } from '@/components/Screen';
-import { LogoWordmark } from '@/components/Logo';
+import AuthBackground from '@/components/AuthBackground';
+import { LogoLockup } from '@/components/Logo';
 import Button from '@/components/Button';
 import AlertDialog from '@/components/AlertDialog';
 import { IconArrow, IconFaceId, IconTouchId } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
-import { colors, fonts, radii } from '@/theme';
+import { colors, fonts, radii, type } from '@/theme';
 import type { RootStackParamList } from '@/navigation/types';
 import * as Biometric from '@/utils/biometric';
 import { login as apiLogin } from '@/api/auth';
@@ -175,8 +176,8 @@ export default function Login() {
   };
 
   return (
-    <ScreenSurface style={{ backgroundColor: '#ECEDFB' }}>
-      <View style={styles.blob}/>
+    <ScreenSurface style={{ backgroundColor: 'transparent' }}>
+      <AuthBackground mirror/>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -188,39 +189,46 @@ export default function Login() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.body}>
-            <View style={{ marginTop: 8 }}>
-              <LogoWordmark size={52}/>
-            </View>
+            <LogoLockup/>
 
-            <View style={{ marginTop: 90 }}>
-              <Text style={styles.hero}>
-                Every great essay{' '}
-                <Text style={styles.heroEmph}>starts with one sentence.</Text>
+            <View style={styles.hero}>
+              <View style={styles.kicker}>
+                <View style={styles.kickerLine}/>
+                <Text style={styles.kickerLabel}>SIGN IN</Text>
+              </View>
+              <Text style={styles.title}>
+                Welcome <Text style={styles.emphBlue}>back!</Text>
               </Text>
-              <Text style={styles.subtitle}>Sign in and write yours today.</Text>
+              <Text style={styles.subtitle}>Please enter your details to sign in.</Text>
             </View>
 
             <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                placeholderTextColor={colors.textTertiary}
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={username}
-                onChangeText={setUsername}
-                editable={!loading}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor={colors.textTertiary}
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-                editable={!loading}
-                onSubmitEditing={handleLogin}
-              />
+              <View style={styles.field}>
+                <Text style={styles.label}>Username</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Student username"
+                  placeholderTextColor={colors.textTertiary}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={username}
+                  onChangeText={setUsername}
+                  editable={!loading}
+                />
+              </View>
+              <View style={styles.field}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.textTertiary}
+                  secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!loading}
+                  onSubmitEditing={handleLogin}
+                />
+              </View>
             </View>
 
             <View style={{ marginTop: 18 }}>
@@ -286,19 +294,20 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  blob: {
-    position: 'absolute', left: -50, top: 110,
-    width: 220, height: 220, borderRadius: 110,
-    backgroundColor: colors.brandCream, opacity: 0.9,
-  },
   body: { flex: 1, padding: 24 },
-  hero: {
-    fontFamily: fonts.sansSb, fontSize: 32, lineHeight: 36, letterSpacing: -0.6,
-    color: colors.textPrimary
+  hero: { marginTop: 90, gap: 12 },
+  kicker: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  kickerLine: { width: 28, height: 2, borderRadius: 2, backgroundColor: colors.brandBlue },
+  kickerLabel: { ...type.label, fontFamily: fonts.sansB, letterSpacing: 3, color: colors.textPrimary },
+  title: {
+    fontFamily: fonts.sansEb, fontSize: 32, lineHeight: 36, letterSpacing: -0.6,
+    color: colors.textPrimary,
   },
-  heroEmph: { fontFamily: fonts.sansEb, color: colors.brandBlue, letterSpacing: -0.6 },
-  subtitle: { marginTop: 16, fontFamily: fonts.sans, fontSize: 16, lineHeight: 24, color: colors.textSecondary },
-  form:  { marginTop: 40, gap: 12 },
+  emphBlue: { color: colors.brandBlue },
+  subtitle: { fontFamily: fonts.sans, fontSize: 16, lineHeight: 24, color: colors.textSecondary },
+  form:  { marginTop: 32, gap: 16 },
+  field: { gap: 8 },
+  label: { fontFamily: fonts.sansSb, fontSize: 13.5, color: colors.textSecondary },
   input: {
     height: 52, paddingHorizontal: 18,
     backgroundColor: colors.bgCard,

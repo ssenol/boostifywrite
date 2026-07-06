@@ -57,6 +57,11 @@ export const colors = {
   danger:     '#DC2626',
   dangerSoft: '#ffd4d4',
   info:       '#1F94DC',
+
+  // ── Auth ekranları (Welcome / Login) — gradient zemin ──
+  authBgStart: '#F3F7FE',
+  authBgMid:   '#FBFCFE',
+  authBgEnd:   '#F6FAF0',
 } as const;
 
 // ── Spacing (4-pt grid) ──
