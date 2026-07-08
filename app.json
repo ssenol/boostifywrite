@@ -9,14 +9,9 @@
     "scheme": "boostifywrite",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#EFF0FA"
-    },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.ues.boostifywrite",
+      "bundleIdentifier": "com.uesturkey.boostifywrite",
       "buildNumber": "1",
       "infoPlist": {
         "NSFaceIDUsageDescription": "BoostifyWrite uses Face ID to provide secure and convenient login for student accounts.",
@@ -28,7 +23,7 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#EFF0FA"
       },
-      "package": "com.ues.boostifywrite",
+      "package": "com.uesturkey.boostifywrite",
       "versionCode": 1,
       "permissions": [
         "android.permission.RECORD_AUDIO"
@@ -40,6 +35,14 @@
     "plugins": [
       "expo-font",
       "expo-asset",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#EFF0FA"
+        }
+      ],
       [
         "expo-image-picker",
         {
