@@ -63,6 +63,7 @@ export default function AssignmentDetail() {
   const [loadingQ,        setLoadingQ]        = useState(true);
   const [imageSheetOpen,    setImageSheetOpen]    = useState(false);
   const [rubricSheetOpen,   setRubricSheetOpen]   = useState(false);
+  const [warningOpen,       setWarningOpen]       = useState(false);
   const [activeRubricIndex, setActiveRubricIndex] = useState<number | null>(0);
 
   const toggleRubric = (i: number) => {
@@ -235,7 +236,7 @@ export default function AssignmentDetail() {
         {starting ? (
           <ActivityIndicator color={colors.brandBlue} style={{ height: 50 }}/>
         ) : (
-          <Button kind="dark" onPress={handleStart}
+          <Button kind="dark" onPress={() => setWarningOpen(true)}
             icon={<IconChevRight size={16} color="#fff"/>}>
             Start Writing
           </Button>
@@ -267,6 +268,30 @@ export default function AssignmentDetail() {
             />
           ))}
         </ScrollView>
+      </BottomSheet>
+
+      {/* Intihal/AI uyarı sheet'i */}
+      <BottomSheet visible={warningOpen} onClose={() => setWarningOpen(false)}>
+        <View style={styles.warningWrap}>
+          <Image
+            source={require('@/../assets/warning.png')}
+            style={styles.warningImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.warningTitle}>Important Notice</Text>
+          <Text style={styles.warningBody}>
+            Copying from another person, rewriting the sample text, or submitting AI-generated content is not allowed and is actively detected by our system.
+          </Text>
+          <Text style={styles.warningBody}>
+            Any attempt of plagiarism or AI usage will be reported in your evaluation and may negatively affect your score.
+          </Text>
+          <Text style={styles.warningBody}>
+            Please complete this task independently, using only your own words.
+          </Text>
+          <Button kind="dark" fullWidth onPress={() => { setWarningOpen(false); handleStart(); }}>
+            Accept
+          </Button>
+        </View>
       </BottomSheet>
     </ScreenSurface>
   );
@@ -398,6 +423,12 @@ const styles = StyleSheet.create({
 
   // Rubric sheet
   sheetTitle: { fontFamily: fonts.sansSb, fontSize: 18, color: colors.textPrimary, marginBottom: 16 },
+
+  // Uyarı sheet
+  warningWrap:  { alignItems: 'center', paddingTop: 4, paddingBottom: 8 },
+  warningImage: { width: 200, height: 130, marginBottom: 12 },
+  warningTitle: { fontFamily: fonts.sansEb, fontSize: 20, letterSpacing: -0.3, color: colors.textPrimary, marginBottom: 12 },
+  warningBody:  { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.textSecondary, textAlign: 'center', marginBottom: 12 },
 
   rubricBlock:        {},
   rubricBlockDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline },
