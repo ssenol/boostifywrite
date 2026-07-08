@@ -3,7 +3,7 @@
 // pill component'imizi kullanıyoruz (TabBar.tsx).
 //
 //   Auth gating: user yoksa Login flow, varsa direkt Main
-//   Main Tab:    Home / Assignments / Report / Profile
+//   Main Tab:    Home / Assignments / Report / My Progress / Profile
 //   Home Stack:  Home → Detail → Compose → Evaluating → Results*
 //   Assignments Stack: AllTasks → same deep flow
 
@@ -28,13 +28,14 @@ import ReportScreen    from '@/screens/ReportScreen';
 
 import AllTasks    from '@/screens/AllTasks';
 import Progress    from '@/screens/Progress';
+import MyProgress  from '@/screens/MyProgress';
 import Profile     from '@/screens/Profile';
 import ErrorScreen from '@/screens/Error';
 
 import type {
   RootStackParamList, TabParamList,
   HomeStackParamList, AssignmentsStackParamList,
-  ReportStackParamList, ProfileStackParamList,
+  ReportStackParamList, MyProgressStackParamList, ProfileStackParamList,
 } from './types';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -43,6 +44,7 @@ const Tab       = createBottomTabNavigator<TabParamList>();
 const HomeStack        = createNativeStackNavigator<HomeStackParamList>();
 const AssignmentsStack = createNativeStackNavigator<AssignmentsStackParamList>();
 const ReportStack      = createNativeStackNavigator<ReportStackParamList>();
+const MyProgressStack  = createNativeStackNavigator<MyProgressStackParamList>();
 const ProfileStack     = createNativeStackNavigator<ProfileStackParamList>();
 
 const noHeader      = { headerShown: false } as const;
@@ -84,6 +86,14 @@ function ReportNavigator() {
   );
 }
 
+function MyProgressNavigator() {
+  return (
+    <MyProgressStack.Navigator screenOptions={stackOptions}>
+      <MyProgressStack.Screen name="MyProgress" component={MyProgress}/>
+    </MyProgressStack.Navigator>
+  );
+}
+
 function ProfileNavigator() {
   return (
     <ProfileStack.Navigator screenOptions={stackOptions}>
@@ -106,7 +116,7 @@ function MainTabs() {
 
         const idMap: Record<string, TabId> = {
           HomeStack: 'Home', AssignmentsStack: 'Assignments',
-          ReportStack: 'Report', ProfileStack: 'Profile',
+          ReportStack: 'Report', MyProgressStack: 'MyProgress', ProfileStack: 'Profile',
         };
         const active = (idMap[state.routes[state.index].name] ?? 'Home') as TabId;
         return (
@@ -115,7 +125,7 @@ function MainTabs() {
             onChange={(id) => {
               const reverse: Record<TabId, keyof TabParamList> = {
                 Home: 'HomeStack', Assignments: 'AssignmentsStack',
-                Report: 'ReportStack', Profile: 'ProfileStack',
+                Report: 'ReportStack', MyProgress: 'MyProgressStack', Profile: 'ProfileStack',
               };
               navigation.navigate(reverse[id]);
             }}
@@ -126,6 +136,7 @@ function MainTabs() {
       <Tab.Screen name="HomeStack"        component={HomeNavigator}/>
       <Tab.Screen name="AssignmentsStack" component={AssignmentsNavigator}/>
       <Tab.Screen name="ReportStack"      component={ReportNavigator}/>
+      <Tab.Screen name="MyProgressStack"  component={MyProgressNavigator}/>
       <Tab.Screen name="ProfileStack"     component={ProfileNavigator}/>
     </Tab.Navigator>
   );

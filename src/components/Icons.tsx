@@ -111,6 +111,13 @@ export const IconProgressTab = ({ size = 22, color = '#000', filled }: P & { fil
   </Svg>
 );
 
+export const IconTrendTab = ({ size = 22, color = '#000', filled }: P & { filled?: boolean }) => (
+  <Svg width={size} height={size} viewBox="0 0 22 22" fill="none">
+    <Path d="M3.5 15L8.5 10L12 13.5L18.5 6.5" stroke={color} strokeWidth={filled ? 2.4 : 1.6} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M13.5 6.5H18.5V11.5" stroke={color} strokeWidth={filled ? 2.4 : 1.6} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
+
 export const IconProfileTab = ({ size = 22, color = '#000', filled }: P & { filled?: boolean }) => (
   <Svg width={size} height={size} viewBox="0 0 22 22" fill="none">
     <Circle cx={11} cy={8} r={3.5} stroke={color} strokeWidth={filled ? 0 : 1.6} fill={filled ? color : 'none'}/>
@@ -186,5 +193,6 @@ export const IconCamera = ({ size = 24, color = '#000' }: P) => (
 
 // Convenience map
 export const TabIcon = {
-  Home: IconHomeTab, Assignments: IconWriteTab, Report: IconProgressTab, Profile: IconProfileTab,
+  Home: IconHomeTab, Assignments: IconWriteTab, Report: IconProgressTab,
+  MyProgress: IconTrendTab, Profile: IconProfileTab,
 } as const;

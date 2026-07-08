@@ -16,6 +16,7 @@ export type TabParamList = {
   HomeStack:        undefined;
   AssignmentsStack: undefined;
   ReportStack:      undefined;
+  MyProgressStack:  undefined;
   ProfileStack:     undefined;
 };
 
@@ -57,6 +58,7 @@ export type ReportStackParamList = {
   Results:  ResultParams;
 };
 export type ProfileStackParamList = { Profile: undefined };
+export type MyProgressStackParamList = { MyProgress: undefined };
 
 // ── Convenience screen prop types ──
 export type RootProps<T extends keyof RootStackParamList> =
