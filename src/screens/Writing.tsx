@@ -138,7 +138,8 @@ export default function Writing() {
       .finally(() => setLoadingQ(false));
   }, [exerciseToken]);
 
-  const handleTextChange = (newText: string) => {
+  // Kelime limitini uygular — hem klavyeden yazmadan hem de OCR ekinden çağrılır.
+  const applyText = (newText: string) => {
     if (maxWords > 0 && countWords(newText) > maxWords) {
       // Orijinal metindeki whitespace/satır sonlarını koruyarak maxWords'üncü
       // kelimenin bittiği konumu bul, sonrasını kes
@@ -155,6 +156,26 @@ export default function Writing() {
       return;
     }
     setText(newText);
+  };
+
+  // Tek seferde ~20 karakterden fazla büyüyen bir değişiklik — yapıştırma,
+  // dikte veya harici klavye kısayolu anlamına gelir (en uzun tahmini kelime
+  // önerisi bile bu eşiğin altında kalır). Böyle bir değişikliği reddedip
+  // metni olduğu gibi bırakıyoruz; textInput controlled olduğu için eski
+  // değere geri döner.
+  const PASTE_JUMP_THRESHOLD = 20;
+  const lastPasteWarnRef = useRef(0);
+
+  const handleTextChange = (newText: string) => {
+    if (newText.length - text.length > PASTE_JUMP_THRESHOLD) {
+      const now = Date.now();
+      if (now - lastPasteWarnRef.current > 3000) {
+        lastPasteWarnRef.current = now;
+        Alert.alert('Pasting is disabled', 'Please type your response in your own words.');
+      }
+      return;
+    }
+    applyText(newText);
   };
 
   // Yazı varken geri dönmeye çalışınca onay iste
@@ -207,7 +228,7 @@ export default function Writing() {
     try {
       const ocrText = await imageToText(result.assets[0].uri);
       const combined = text + (text ? '\n' : '') + ocrText;
-      handleTextChange(combined);
+      applyText(combined);
     } catch {
       failed = true;
     } finally {
@@ -284,6 +305,7 @@ export default function Writing() {
             value={text}
             onChangeText={handleTextChange}
             editable={!submitting}
+            contextMenuHidden
           />
           {keyboardHeight === 0 && !submitting && (
             <Pressable
