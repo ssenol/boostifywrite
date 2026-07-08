@@ -265,13 +265,13 @@ export default function Login() {
         message={getBiometricPromptMessage()}
         buttons={[
           {
+            text: 'Enable',
+            onPress: handleEnableBiometric,
+          },
+          {
             text: 'Not now',
             style: 'cancel',
             onPress: handleDismissBiometric,
-          },
-          {
-            text: 'Enable',
-            onPress: handleEnableBiometric,
           },
         ]}
         onClose={handleDismissBiometric}
