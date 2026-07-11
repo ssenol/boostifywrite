@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 
 import { BulletCard, SummaryCard } from '@/components/BulletCard';
+import ResponsiveTwoCol from '@/components/ResponsiveTwoCol';
 import { useReport, isInlineCorrection, findRubricCriteriaByKeyword } from '@/context/ReportContext';
 import { type } from '@/theme';
 
@@ -18,19 +19,20 @@ export function OrganisationCohesionContent() {
 
   return (
     <>
-      {achievements.length > 0 && (
-        <>
-          <Text style={[type.label, { marginBottom: 6 }]}>ACHIEVEMENTS</Text>
-          <BulletCard items={achievements} kind="good" />
-        </>
-      )}
-
-      {stringIssues.length > 0 && (
-        <>
-          <Text style={[type.label, { marginTop: 16, marginBottom: 6 }]}>ISSUES</Text>
-          <BulletCard items={stringIssues} kind="bad" />
-        </>
-      )}
+      <ResponsiveTwoCol
+        left={achievements.length > 0 && (
+          <View>
+            <Text style={[type.label, { marginBottom: 6 }]}>ACHIEVEMENTS</Text>
+            <BulletCard items={achievements} kind="good" />
+          </View>
+        )}
+        right={stringIssues.length > 0 && (
+          <View>
+            <Text style={[type.label, { marginBottom: 6 }]}>ISSUES</Text>
+            <BulletCard items={stringIssues} kind="bad" />
+          </View>
+        )}
+      />
 
       {!!summary && (
         <>

@@ -6,10 +6,11 @@ import { View, Text, StyleSheet, ActivityIndicator, Pressable, ScrollView } from
 import Card from '@/components/Card';
 import BottomSheet from '@/components/BottomSheet';
 import { IconChevDown } from '@/components/Icons';
-import { StatTile, LineTrend, DonutChart, RingMeter, BarRow, RadarChart } from '@/components/AnalyticsCharts';
+import { StatTile, LineTrend, DonutChart, RingMeter, BarRow, ColumnBarChart } from '@/components/AnalyticsCharts';
 import { fetchSelfAnalytics } from '@/api';
-import { colors, fonts, radii, type, getCefrBand, levelColor, CEFR_BANDS } from '@/theme';
+import { colors, fonts, radii, layout, type, getCefrBand, levelColor, CEFR_BANDS } from '@/theme';
 import { criterionToConfig } from '@/screens/ReportOverview';
+import { useGridColumnWidth } from '@/hooks/useIsTablet';
 import type { SelfAnalyticsWriting } from '@/types/api';
 
 // Kategorik hata-tipi paleti — sabit sıra, validate_palette.js ile CVD-safe onaylı.
@@ -57,6 +58,7 @@ export default function AnalyticsPanel({ userId }: { userId: string }) {
   const [error,   setError]   = useState<string | null>(null);
   const [essay,   setEssay]   = useState<string | null>(null);
   const [essayPickerOpen, setEssayPickerOpen] = useState(false);
+  const isTablet = useGridColumnWidth() !== undefined;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,18 +134,33 @@ export default function AnalyticsPanel({ userId }: { userId: string }) {
   return (
     <View>
       {/* KPI row */}
-      <View style={styles.tileRow}>
-        <StatTile label="SUBMISSIONS" value={String(kpis.submissions)} basis="31%"/>
-        <StatTile label="AVG SCORE" value={kpis.avgScore.toFixed(0)} unit="/ 100" valueColor={band.color} basis="31%"/>
-        <StatTile label="BEST SCORE" value={String(kpis.bestScore)} unit="/ 100" valueColor={colors.brandGreen} basis="31%"/>
-      </View>
-      <View style={[styles.tileRow, { marginTop: 10 }]}>
-        <StatTile label="TOTAL WORDS" value={formatCompact(kpis.totalWords)} caption={`avg ${kpis.avgWordCount} / essay`} basis="48%"/>
-        <StatTile
-          label="ERRORS" value={String(kpis.totalErrors)} valueColor={colors.danger} basis="48%"
-          caption={flagParts.length ? flagParts.join(' · ') : undefined}
-        />
-      </View>
+      {isTablet ? (
+        <View style={styles.tileRow}>
+          <StatTile label="SUBMISSIONS" value={String(kpis.submissions)} basis="18%"/>
+          <StatTile label="AVG SCORE" value={kpis.avgScore.toFixed(0)} unit="/ 100" valueColor={band.color} basis="18%"/>
+          <StatTile label="BEST SCORE" value={String(kpis.bestScore)} unit="/ 100" valueColor={colors.brandGreen} basis="18%"/>
+          <StatTile label="TOTAL WORDS" value={formatCompact(kpis.totalWords)} caption={`avg ${kpis.avgWordCount} / essay`} basis="18%"/>
+          <StatTile
+            label="ERRORS" value={String(kpis.totalErrors)} valueColor={colors.danger} basis="18%"
+            caption={flagParts.length ? flagParts.join(' · ') : undefined}
+          />
+        </View>
+      ) : (
+        <>
+          <View style={styles.tileRow}>
+            <StatTile label="SUBMISSIONS" value={String(kpis.submissions)} basis="31%"/>
+            <StatTile label="AVG SCORE" value={kpis.avgScore.toFixed(0)} unit="/ 100" valueColor={band.color} basis="31%"/>
+            <StatTile label="BEST SCORE" value={String(kpis.bestScore)} unit="/ 100" valueColor={colors.brandGreen} basis="31%"/>
+          </View>
+          <View style={[styles.tileRow, { marginTop: 10 }]}>
+            <StatTile label="TOTAL WORDS" value={formatCompact(kpis.totalWords)} caption={`avg ${kpis.avgWordCount} / essay`} basis="48%"/>
+            <StatTile
+              label="ERRORS" value={String(kpis.totalErrors)} valueColor={colors.danger} basis="48%"
+              caption={flagParts.length ? flagParts.join(' · ') : undefined}
+            />
+          </View>
+        </>
+      )}
 
       {/* Score trend */}
       {trend.length > 0 && (
@@ -160,11 +177,13 @@ export default function AnalyticsPanel({ userId }: { userId: string }) {
       <View style={{ marginTop: 20 }}/>
       <SectionHeading label="PER-CRITERION AVERAGE" right="score / 100"/>
       <Card padding={16}>
-        <RadarChart
-          axes={writing.criteriaAverages.map(c => ({
+        <ColumnBarChart
+          max={100}
+          items={writing.criteriaAverages.map(c => ({
+            key: c.criterion,
             label: shortCriterionLabel(c.criterion),
-            value: c.avg,
-            dotColor: criterionToConfig(c.criterion).color,
+            value: Math.round(c.avg),
+            color: criterionToConfig(c.criterion).color,
           }))}
         />
       </Card>
@@ -187,19 +206,21 @@ export default function AnalyticsPanel({ userId }: { userId: string }) {
           </Card>
 
           <BottomSheet visible={essayPickerOpen} onClose={() => setEssayPickerOpen(false)} maxHeight={420}>
-            <Text style={[type.label, { marginBottom: 12, paddingHorizontal: 4 }]}>SELECT ESSAY</Text>
-            <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
-              {essays.map((e, i) => (
-                <Pressable
-                  key={e}
-                  onPress={() => { setEssay(e); setEssayPickerOpen(false); }}
-                  style={[styles.essayOption, i < essays.length - 1 && styles.essayOptionDivider]}
-                >
-                  <Text style={[styles.essayOptionText, e === essay && styles.essayOptionTextActive]}>{e}</Text>
-                </Pressable>
-              ))}
-              <View style={{ height: 8 }}/>
-            </ScrollView>
+            <View style={styles.essaySheetContent}>
+              <Text style={[type.label, { marginBottom: 12, paddingHorizontal: 4 }]}>SELECT ESSAY</Text>
+              <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+                {essays.map((e, i) => (
+                  <Pressable
+                    key={e}
+                    onPress={() => { setEssay(e); setEssayPickerOpen(false); }}
+                    style={[styles.essayOption, i < essays.length - 1 && styles.essayOptionDivider]}
+                  >
+                    <Text style={[styles.essayOptionText, e === essay && styles.essayOptionTextActive]}>{e}</Text>
+                  </Pressable>
+                ))}
+                <View style={{ height: 8 }}/>
+              </ScrollView>
+            </View>
           </BottomSheet>
         </>
       )}
@@ -209,18 +230,20 @@ export default function AnalyticsPanel({ userId }: { userId: string }) {
         <>
           <View style={{ marginTop: 20 }}/>
           <SectionHeading label="ERROR TYPE MIX" right={`${totalErrors} total`}/>
-          <Card padding={16} style={{ alignItems: 'center' }}>
-            <DonutChart
-              centerValue={String(totalErrors)}
-              centerLabel="ERRORS"
-              segments={writing.errorBreakdown.map(e => ({
-                label: titleCase(e.type), value: e.count,
-                color: ERROR_TYPE_COLORS[e.type] ?? ERROR_TYPE_FALLBACK,
-              }))}
-            />
-            <View style={styles.legendGrid}>
+          <Card padding={16} style={isTablet ? styles.chartRow : { alignItems: 'center' }}>
+            <View style={isTablet ? styles.chartWrap : undefined}>
+              <DonutChart
+                centerValue={String(totalErrors)}
+                centerLabel="ERRORS"
+                segments={writing.errorBreakdown.map(e => ({
+                  label: titleCase(e.type), value: e.count,
+                  color: ERROR_TYPE_COLORS[e.type] ?? ERROR_TYPE_FALLBACK,
+                }))}
+              />
+            </View>
+            <View style={[styles.legendGrid, isTablet && styles.legendGridSide]}>
               {writing.errorBreakdown.map(e => (
-                <View key={e.type} style={styles.legendItem}>
+                <View key={e.type} style={[styles.legendItem, isTablet && styles.legendItemInline]}>
                   <View style={[styles.legendDot, { backgroundColor: ERROR_TYPE_COLORS[e.type] ?? ERROR_TYPE_FALLBACK }]}/>
                   <Text style={styles.legendLabel} numberOfLines={1}>{titleCase(e.type)}</Text>
                   <Text style={styles.legendValue}>{e.count}</Text>
@@ -270,23 +293,27 @@ export default function AnalyticsPanel({ userId }: { userId: string }) {
       {/* Keyword usage */}
       <View style={{ marginTop: 20 }}/>
       <SectionHeading label="KEYWORD USAGE"/>
-      <Card padding={16} style={{ alignItems: 'center' }}>
-        <RingMeter value={writing.keywordPerformance.rate} color={meterColor}/>
-        <Text style={styles.keywordCaption}>
-          {writing.keywordPerformance.used} / {writing.keywordPerformance.required} required keywords used
-        </Text>
-        {writing.keywordPerformance.mostMissed.length > 0 && (
-          <>
-            <Text style={styles.keywordSubheading}>MOST-MISSED KEYWORDS</Text>
-            <View style={styles.chipRow}>
-              {writing.keywordPerformance.mostMissed.map(m => (
-                <View key={m.keyword} style={styles.missedChip}>
-                  <Text style={styles.missedChipText}>{m.keyword} ×{m.missedCount}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
+      <Card padding={16} style={isTablet ? styles.chartRow : { alignItems: 'center' }}>
+        <View style={isTablet ? styles.chartWrap : undefined}>
+          <RingMeter value={writing.keywordPerformance.rate} color={meterColor}/>
+        </View>
+        <View style={isTablet ? { flex: 1 } : undefined}>
+          <Text style={[styles.keywordCaption, isTablet && { marginTop: 0 }]}>
+            {writing.keywordPerformance.used} / {writing.keywordPerformance.required} required keywords used
+          </Text>
+          {writing.keywordPerformance.mostMissed.length > 0 && (
+            <>
+              <Text style={styles.keywordSubheading}>MOST-MISSED KEYWORDS</Text>
+              <View style={[styles.chipRow, isTablet && { justifyContent: 'flex-start' }]}>
+                {writing.keywordPerformance.mostMissed.map(m => (
+                  <View key={m.keyword} style={styles.missedChip}>
+                    <Text style={styles.missedChipText}>{m.keyword} ×{m.missedCount}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+        </View>
       </Card>
 
       {/* CEFR breakdown */}
@@ -298,28 +325,14 @@ export default function AnalyticsPanel({ userId }: { userId: string }) {
             <Text style={styles.cefrNote}>
               How many of your essays were scored at each CEFR band. This is a per-submission count, not your overall level — placement is coming soon.
             </Text>
-            <View style={styles.cefrCountRow}>
-              {cefrSorted.map(c => (
-                <Text key={c.cefr} style={styles.cefrCount}>{c.count}</Text>
-              ))}
-            </View>
-            <View style={styles.cefrBarRow}>
-              {cefrSorted.map(c => {
-                const maxCount = Math.max(...cefrSorted.map(x => x.count));
-                const h = Math.max(6, (c.count / maxCount) * 90);
-                const lc = levelColor(c.cefr);
-                return (
-                  <View key={c.cefr} style={styles.cefrBarCol}>
-                    <View style={[styles.cefrBar, { height: h, backgroundColor: lc.fg }]}/>
-                  </View>
-                );
-              })}
-            </View>
-            <View style={styles.cefrLabelRow}>
-              {cefrSorted.map(c => (
-                <Text key={c.cefr} style={styles.cefrLevel} numberOfLines={2}>{c.cefr}</Text>
-              ))}
-            </View>
+            <ColumnBarChart
+              items={cefrSorted.map(c => ({
+                key: c.cefr,
+                label: c.cefr,
+                value: c.count,
+                color: levelColor(c.cefr).fg,
+              }))}
+            />
           </Card>
         </>
       )}
@@ -343,9 +356,15 @@ const styles = StyleSheet.create({
   essayOptionDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline },
   essayOptionText: { fontFamily: fonts.sans, fontSize: 15, color: colors.textPrimary },
   essayOptionTextActive: { fontFamily: fonts.sansEb, color: colors.brandBlue },
+  essaySheetContent: { width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center' },
+
+  chartRow:  { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  chartWrap: { flex: 1, alignItems: 'center' },
 
   legendGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 18, width: '100%', columnGap: 20 },
+  legendGridSide: { marginTop: 0, width: undefined, flex: 1, flexDirection: 'column', flexWrap: 'nowrap', gap: 8 },
   legendItem: { flexBasis: '42%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
+  legendItemInline: { flexBasis: 'auto', flexGrow: 0, marginBottom: 0 },
   legendDot: { width: 9, height: 9, borderRadius: 5 },
   legendLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.textPrimary },
   legendValue: { fontFamily: fonts.sansEb, fontSize: 12.5, color: colors.textPrimary, minWidth: 14, textAlign: 'right' },
@@ -371,13 +390,6 @@ const styles = StyleSheet.create({
   missedChipText: { fontFamily: fonts.sansSb, fontSize: 12, color: colors.danger },
 
   cefrNote: { fontFamily: fonts.sans, fontSize: 12.5, lineHeight: 18, color: colors.textTertiary, marginBottom: 16 },
-  cefrCountRow: { flexDirection: 'row', marginBottom: 6 },
-  cefrCount: { flex: 1, textAlign: 'center', fontFamily: fonts.sansEb, fontSize: 13, color: colors.textPrimary },
-  cefrBarRow: { flexDirection: 'row', alignItems: 'flex-end', height: 90 },
-  cefrBarCol: { flex: 1, alignItems: 'center' },
-  cefrBar: { width: '55%', maxWidth: 40, minWidth: 8, borderRadius: radii.xs },
-  cefrLabelRow: { flexDirection: 'row', marginTop: 6 },
-  cefrLevel: { flex: 1, fontFamily: fonts.mono, fontSize: 10, color: colors.textSecondary, textAlign: 'center' },
 
   retryBtn: { marginTop: 4, paddingHorizontal: 16, paddingVertical: 8, borderRadius: radii.pill, backgroundColor: colors.brandBlueSoft },
   retryText: { fontFamily: fonts.sansSb, fontSize: 13, color: colors.brandBlue },

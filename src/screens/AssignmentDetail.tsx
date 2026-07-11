@@ -15,9 +15,10 @@ import StatTile from '@/components/StatTile';
 import BottomSheet from '@/components/BottomSheet';
 import { IconChevLeft, IconChevRight, IconChevDown, IconInfo } from '@/components/Icons';
 import HtmlText from '@/components/HtmlText';
+import ResponsiveTwoCol from '@/components/ResponsiveTwoCol';
 import { useAuth } from '@/context/AuthContext';
 import { generateExerciseToken, fetchTaskContent } from '@/api';
-import { colors, fonts, radii, type } from '@/theme';
+import { colors, fonts, radii, layout, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
 import type { ExerciseQuestion, RubricCriteria } from '@/types/api';
 
@@ -104,6 +105,7 @@ export default function AssignmentDetail() {
     ? meta.keywords.split(',').map(k => k.trim()).filter(Boolean)
     : [];
 
+
   return (
     <ScreenSurface edges={['top']}>
       <View style={styles.header}>
@@ -180,33 +182,34 @@ export default function AssignmentDetail() {
             </Card>
           )}
 
-          {meta.outlines && meta.outlines.length > 0 && (
-            <Card padding={16}>
-              <Text style={[type.label, { marginBottom: 4 }]}>WRITING OUTLINE</Text>
-              {meta.outlines.map((o, i) => (
-                <StructureRow
-                  key={o.id}
-                  para={`${i + 1}`}
-                  text={o.label}
-                  purpose={o.purpose}
-                  last={i === meta.outlines!.length - 1}
-                />
-              ))}
-            </Card>
-          )}
-
-          {keywords.length > 0 && (
-            <Card padding={16}>
-              <Text style={[type.label, { marginBottom: 12 }]}>KEYWORDS</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {keywords.map(k => (
-                  <View key={k} style={styles.keyword}>
-                    <Text style={styles.keywordText}>{k}</Text>
-                  </View>
+          <ResponsiveTwoCol
+            left={!!meta.outlines && meta.outlines.length > 0 && (
+              <Card padding={16}>
+                <Text style={[type.label, { marginBottom: 4 }]}>WRITING OUTLINE</Text>
+                {meta.outlines.map((o, i) => (
+                  <StructureRow
+                    key={o.id}
+                    para={`${i + 1}`}
+                    text={o.label}
+                    purpose={o.purpose}
+                    last={i === meta.outlines!.length - 1}
+                  />
                 ))}
-              </View>
-            </Card>
-          )}
+              </Card>
+            )}
+            right={keywords.length > 0 && (
+              <Card padding={16}>
+                <Text style={[type.label, { marginBottom: 12 }]}>KEYWORDS</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {keywords.map(k => (
+                    <View key={k} style={styles.keyword}>
+                      <Text style={styles.keywordText}>{k}</Text>
+                    </View>
+                  ))}
+                </View>
+              </Card>
+            )}
+          />
 
           {/* YOU'LL BE GRADED ON — geçici olarak gizlendi
           {rubricCriteria.length > 0 && (
@@ -237,6 +240,7 @@ export default function AssignmentDetail() {
           <ActivityIndicator color={colors.brandBlue} style={{ height: 50 }}/>
         ) : (
           <Button kind="dark" onPress={() => setWarningOpen(true)}
+            style={{ maxWidth: layout.maxActionWidth, alignSelf: 'center' }}
             icon={<IconChevRight size={16} color="#fff"/>}>
             Start Writing
           </Button>
@@ -288,7 +292,7 @@ export default function AssignmentDetail() {
           <Text style={styles.warningBody}>
             Please complete this task independently, using only your own words.
           </Text>
-          <Button kind="dark" fullWidth onPress={() => { setWarningOpen(false); handleStart(); }}>
+          <Button kind="dark" fullWidth style={{ marginTop: 8 }} onPress={() => { setWarningOpen(false); handleStart(); }}>
             Accept
           </Button>
         </View>
@@ -425,7 +429,10 @@ const styles = StyleSheet.create({
   sheetTitle: { fontFamily: fonts.sansSb, fontSize: 18, color: colors.textPrimary, marginBottom: 16 },
 
   // Uyarı sheet
-  warningWrap:  { alignItems: 'center', paddingTop: 4, paddingBottom: 8 },
+  warningWrap:  {
+    alignItems: 'center', paddingTop: 4, paddingBottom: 8,
+    width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center',
+  },
   warningImage: { width: 200, height: 130, marginBottom: 12 },
   warningTitle: { fontFamily: fonts.sansEb, fontSize: 20, letterSpacing: -0.3, color: colors.textPrimary, marginBottom: 12 },
   warningBody:  { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.textSecondary, textAlign: 'center', marginBottom: 12 },

@@ -11,10 +11,11 @@ import { ScreenSurface } from '@/components/Screen';
 import IconButton from '@/components/IconButton';
 import ProgressBar from '@/components/ProgressBar';
 import BottomSheet from '@/components/BottomSheet';
+import AlertDialog from '@/components/AlertDialog';
 import { IconChevLeft, IconCheck, IconArrow, IconChevDown, IconScanText } from '@/components/Icons';
 import { fetchTaskContent, submitWriting, imageToText } from '@/api';
 import HtmlText from '@/components/HtmlText';
-import { colors, fonts, radii, type } from '@/theme';
+import { colors, fonts, radii, layout, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
 import type { ExerciseQuestion } from '@/types/api';
 
@@ -179,21 +180,26 @@ export default function Writing() {
   };
 
   // Yazı varken geri dönmeye çalışınca onay iste
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const pendingNavAction = useRef<Readonly<{ type: string; payload?: object; source?: string; target?: string }> | null>(null);
+
   useEffect(() => {
     const unsubscribe = nav.addListener('beforeRemove', (e) => {
       if (text.trim().length === 0 || submitting) return;
       e.preventDefault();
-      Alert.alert(
-        'Discard draft?',
-        'You have unsaved text. Going back will discard your writing.',
-        [
-          { text: 'Keep writing', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => nav.dispatch(e.data.action) },
-        ]
-      );
+      pendingNavAction.current = e.data.action;
+      setShowDiscardDialog(true);
     });
     return unsubscribe;
   }, [nav, text, submitting]);
+
+  const handleDiscardConfirm = () => {
+    setShowDiscardDialog(false);
+    if (pendingNavAction.current) {
+      nav.dispatch(pendingNavAction.current);
+      pendingNavAction.current = null;
+    }
+  };
 
   const toggle = (id: string) =>
     setDone(d => d.includes(id) ? d.filter(x => x !== id) : [...d, id]);
@@ -471,31 +477,44 @@ export default function Writing() {
         onClose={ocrProcessing ? () => {} : () => setShowOcrSheet(false)}
         maxHeight="45%"
       >
-        {ocrProcessing ? (
-          <View style={styles.ocrProcessing}>
-            <ActivityIndicator size="large" color={colors.brandBlue}/>
-            <Text style={styles.ocrProcessingTitle}>Reading your handwriting…</Text>
-            <Text style={styles.ocrProcessingSpot}>This usually takes 2–6 seconds.</Text>
-          </View>
-        ) : (
-          <>
-            <View style={styles.ocrSheetHeader}>
-              <Text style={styles.ocrSheetTitle}>Handwritten draft</Text>
-              <Text style={styles.ocrSheetSpot}>
-                Take a photo or upload an image of your handwritten text. It will be converted and added to your essay — you can review and edit before submitting.
-              </Text>
+        <View style={styles.ocrSheetContent}>
+          {ocrProcessing ? (
+            <View style={styles.ocrProcessing}>
+              <ActivityIndicator size="large" color={colors.brandBlue}/>
+              <Text style={styles.ocrProcessingTitle}>Reading your handwriting…</Text>
+              <Text style={styles.ocrProcessingSpot}>This usually takes 2–6 seconds.</Text>
             </View>
-            <View style={styles.ocrSheetActions}>
-              <Pressable style={[styles.ocrSheetRow, styles.ocrSheetDivider]} onPress={() => pickAndOcr('camera')}>
-                <Text style={styles.ocrSheetRowText}>Take a photo</Text>
-              </Pressable>
-              <Pressable style={styles.ocrSheetRow} onPress={() => pickAndOcr('library')}>
-                <Text style={styles.ocrSheetRowText}>Choose from library</Text>
-              </Pressable>
-            </View>
-          </>
-        )}
+          ) : (
+            <>
+              <View style={styles.ocrSheetHeader}>
+                <Text style={styles.ocrSheetTitle}>Handwritten draft</Text>
+                <Text style={styles.ocrSheetSpot}>
+                  Take a photo or upload an image of your handwritten text. It will be converted and added to your essay — you can review and edit before submitting.
+                </Text>
+              </View>
+              <View style={styles.ocrSheetActions}>
+                <Pressable style={[styles.ocrSheetRow, styles.ocrSheetDivider]} onPress={() => pickAndOcr('camera')}>
+                  <Text style={styles.ocrSheetRowText}>Take a photo</Text>
+                </Pressable>
+                <Pressable style={styles.ocrSheetRow} onPress={() => pickAndOcr('library')}>
+                  <Text style={styles.ocrSheetRowText}>Choose from library</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
+        </View>
       </BottomSheet>
+
+      <AlertDialog
+        visible={showDiscardDialog}
+        title="Discard draft?"
+        message="You have unsaved text. Going back will discard your writing."
+        buttons={[
+          { text: 'Discard', style: 'destructive', onPress: handleDiscardConfirm },
+          { text: 'Keep writing', style: 'cancel', onPress: () => setShowDiscardDialog(false) },
+        ]}
+        onClose={() => setShowDiscardDialog(false)}
+      />
     </ScreenSurface>
   );
 }
@@ -581,6 +600,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.bgCard,
   },
+
+  ocrSheetContent: { width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center' },
 
   ocrProcessing: {
     paddingVertical: 32, alignItems: 'center', gap: 14,

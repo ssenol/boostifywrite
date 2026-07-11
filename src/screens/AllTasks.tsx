@@ -12,9 +12,10 @@ import AssignmentCard from '@/components/AssignmentCard';
 import SectionHeader from '@/components/SectionHeader';
 import BottomSheet from '@/components/BottomSheet';
 import { IconCheck, IconFilter } from '@/components/Icons';
+import { useGridColumnWidth } from '@/hooks/useIsTablet';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAssignedTasks } from '@/api';
-import { colors, fonts, radii, type } from '@/theme';
+import { colors, fonts, radii, spacing, layout, type } from '@/theme';
 import type { AssignmentsStackParamList } from '@/navigation/types';
 import type { AssignedExercise } from '@/types/api';
 
@@ -29,6 +30,8 @@ function capitalize(str: string): string {
 export default function AllTasks() {
   const nav    = useNavigation<Nav>();
   const { user } = useAuth();
+  const gridColumnWidth = useGridColumnWidth();
+  const isTablet = gridColumnWidth !== undefined;
 
   const [tasks,      setTasks]      = useState<AssignedExercise[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -142,9 +145,11 @@ export default function AllTasks() {
             {overdue.length > 0 && (
               <View style={{ marginBottom: 24 }}>
                 <SectionHeader label={`OVERDUE · ${overdue.length}`}/>
-                <View style={{ gap: 8 }}>
+                <View style={[styles.list, isTablet && styles.listGrid]}>
                   {overdue.map(ex => (
-                    <AssignmentCard key={ex.id} exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
+                    <View key={ex.id} style={gridColumnWidth !== undefined && { width: gridColumnWidth }}>
+                      <AssignmentCard exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
+                    </View>
                   ))}
                 </View>
               </View>
@@ -152,9 +157,11 @@ export default function AllTasks() {
             {active.length > 0 && (
               <View>
                 <SectionHeader label={`ACTIVE · ${active.length}`}/>
-                <View style={{ gap: 8 }}>
+                <View style={[styles.list, isTablet && styles.listGrid]}>
                   {active.map(ex => (
-                    <AssignmentCard key={ex.id} exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
+                    <View key={ex.id} style={gridColumnWidth !== undefined && { width: gridColumnWidth }}>
+                      <AssignmentCard exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
+                    </View>
                   ))}
                 </View>
               </View>
@@ -195,47 +202,49 @@ function FilterSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.sheetHeader}>
-        <Text style={styles.sheetTitle}>Filter Tasks</Text>
-        <Pressable onPress={() => setLocal({ level: [], genre: [] })} hitSlop={8}>
-          <Text style={styles.resetBtn}>Reset</Text>
-        </Pressable>
-      </View>
+      <View style={styles.sheetContent}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>Filter Tasks</Text>
+          <Pressable onPress={() => setLocal({ level: [], genre: [] })} hitSlop={8}>
+            <Text style={styles.resetBtn}>Reset</Text>
+          </Pressable>
+        </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
-        {availableLevels.length > 0 && (
-          <FilterGroup label="CEFR LEVEL">
-            <View style={styles.levelPills}>
-              {availableLevels.map(l => {
-                const active = local.level.includes(l);
-                return (
-                  <Pressable key={l} onPress={() => toggle('level', l)}
-                    style={[styles.levelPill, active && styles.levelPillActive]}>
-                    <Text style={[styles.levelPillText, active && { color: '#fff' }]}>{l}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </FilterGroup>
-        )}
-        {availableGenres.length > 0 && (
-          <FilterGroup label="TYPE">
-            {availableGenres.map(g => (
-              <FilterOption key={g} label={capitalize(g)}
-                checked={local.genre.includes(g)}
-                onPress={() => toggle('genre', g)}/>
-            ))}
-          </FilterGroup>
-        )}
-      </ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
+          {availableLevels.length > 0 && (
+            <FilterGroup label="CEFR LEVEL">
+              <View style={styles.levelPills}>
+                {availableLevels.map(l => {
+                  const active = local.level.includes(l);
+                  return (
+                    <Pressable key={l} onPress={() => toggle('level', l)}
+                      style={[styles.levelPill, active && styles.levelPillActive]}>
+                      <Text style={[styles.levelPillText, active && { color: '#fff' }]}>{l}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </FilterGroup>
+          )}
+          {availableGenres.length > 0 && (
+            <FilterGroup label="TYPE">
+              {availableGenres.map(g => (
+                <FilterOption key={g} label={capitalize(g)}
+                  checked={local.genre.includes(g)}
+                  onPress={() => toggle('genre', g)}/>
+              ))}
+            </FilterGroup>
+          )}
+        </ScrollView>
 
-      <View style={styles.sheetActions}>
-        <Pressable style={styles.cancelBtn} onPress={onClose}>
-          <Text style={styles.cancelBtnText}>Cancel</Text>
-        </Pressable>
-        <Pressable style={styles.applyBtn} onPress={() => onApply(local)}>
-          <Text style={styles.applyBtnText}>Apply Filters</Text>
-        </Pressable>
+        <View style={styles.sheetActions}>
+          <Pressable style={styles.cancelBtn} onPress={onClose}>
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </Pressable>
+          <Pressable style={styles.applyBtn} onPress={() => onApply(local)}>
+            <Text style={styles.applyBtnText}>Apply Filters</Text>
+          </Pressable>
+        </View>
       </View>
     </BottomSheet>
   );
@@ -270,6 +279,9 @@ const styles = StyleSheet.create({
   },
   title: { fontFamily: fonts.sansSb, fontSize: 26, letterSpacing: -0.3, marginTop: 4 },
 
+  list:     { gap: spacing.s2 },
+  listGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.s4 },
+
   filterBtn: {
     height: 40, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -286,6 +298,8 @@ const styles = StyleSheet.create({
   empty:     { alignItems: 'center', paddingVertical: 60 },
   emptyTitle:{ fontFamily: fonts.sansSb, fontSize: 18, marginBottom: 8 },
   emptyBody: { fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary },
+
+  sheetContent: { width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center' },
 
   sheetHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, marginTop: 8 },
   sheetTitle:  { fontFamily: fonts.sansSb, fontSize: 22, letterSpacing: -0.3, flex: 1 },

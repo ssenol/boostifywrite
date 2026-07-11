@@ -1,6 +1,6 @@
 // TabBar — alttan floating pill nav (5 sekme: Home / Assignments / Report / My Progress / Profile)
 import React from 'react';
-import { View, Pressable, Text, StyleSheet } from 'react-native';
+import { View, Pressable, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { colors, fonts, radii, shadow } from '@/theme';
 import { TabIcon } from './Icons';
 
@@ -14,11 +14,17 @@ const TABS: Array<{ id: TabId; label?: string; color: string }> = [
   { id: 'Profile',     color: colors.textPrimary },
 ];
 
+// Geniş ekranlarda (tablet) pill nav'ın kenarlara yapışmaması için genişlik sınırlanır.
+const MAX_BAR_WIDTH = 520;
+
 export default function TabBar({
   active, onChange,
 }: { active: TabId; onChange: (t: TabId) => void }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const horizontalInset = Math.max(20, (screenWidth - MAX_BAR_WIDTH) / 2);
+
   return (
-    <View style={[styles.bar, shadow.lg]}>
+    <View style={[styles.bar, { left: horizontalInset, right: horizontalInset }, shadow.lg]}>
       {TABS.map(({ id, label, color }) => {
         const isActive = id === active;
         const Icon = TabIcon[id];
@@ -42,7 +48,7 @@ export default function TabBar({
 
 const styles = StyleSheet.create({
   bar: {
-    position: 'absolute', left: 20, right: 20, bottom: 24,
+    position: 'absolute', bottom: 24,
     backgroundColor: colors.bgCard,
     borderRadius: 28, borderWidth: 1, borderColor: colors.border,
     padding: 6,

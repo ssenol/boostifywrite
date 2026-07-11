@@ -10,7 +10,7 @@ import AlertDialog from '@/components/AlertDialog';
 import BottomSheet from '@/components/BottomSheet';
 import { useAuth } from '@/context/AuthContext';
 import { uploadAvatar } from '@/api/auth';
-import { colors, fonts, radii, type } from '@/theme';
+import { colors, fonts, radii, layout, type } from '@/theme';
 import * as Biometric from '@/utils/biometric';
 
 const SETTINGS: { label: string; value: string }[] = [
@@ -250,17 +250,17 @@ export default function Profile() {
         message="Your saved credentials will be removed. Are you sure?"
         buttons={[
           {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: handleDisableBiometric,
+          },
+          {
             text: 'Cancel',
             style: 'cancel',
             onPress: () => {
               setShowDisableBiometricDialog(false);
               setBiometricEnabled(true); // Switch'i geri çevir
             },
-          },
-          {
-            text: 'Disable',
-            style: 'destructive',
-            onPress: handleDisableBiometric,
           },
         ]}
         onClose={() => {
@@ -311,17 +311,19 @@ export default function Profile() {
       />
 
       <BottomSheet visible={showAvatarSheet} onClose={() => setShowAvatarSheet(false)} maxHeight="40%">
-        <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Profile photo</Text>
-          <Text style={styles.sheetSpot}>Update your photo from your camera or photo library.</Text>
-        </View>
-        <View style={styles.sheetActions}>
-          <Pressable style={[styles.sheetRow, styles.sheetDivider]} onPress={() => pickAndUpload('camera')}>
-            <Text style={styles.sheetRowText}>Take a photo</Text>
-          </Pressable>
-          <Pressable style={styles.sheetRow} onPress={() => pickAndUpload('library')}>
-            <Text style={styles.sheetRowText}>Choose from library</Text>
-          </Pressable>
+        <View style={styles.sheetContent}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Profile photo</Text>
+            <Text style={styles.sheetSpot}>Update your photo from your camera or photo library.</Text>
+          </View>
+          <View style={styles.sheetActions}>
+            <Pressable style={[styles.sheetRow, styles.sheetDivider]} onPress={() => pickAndUpload('camera')}>
+              <Text style={styles.sheetRowText}>Take a photo</Text>
+            </Pressable>
+            <Pressable style={styles.sheetRow} onPress={() => pickAndUpload('library')}>
+              <Text style={styles.sheetRowText}>Choose from library</Text>
+            </Pressable>
+          </View>
         </View>
       </BottomSheet>
     </ScreenSurface>
@@ -400,6 +402,7 @@ const styles = StyleSheet.create({
     marginTop: 16, padding: 14,
     borderWidth: 1, borderColor: colors.danger, borderRadius: radii.pill,
     alignItems: 'center',
+    width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center',
   },
   signOutText: { fontFamily: fonts.sansSb, fontSize: 14, color: colors.danger },
   
@@ -413,6 +416,8 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textDecorationLine: 'underline',
   },
+
+  sheetContent: { width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center' },
 
   sheetHeader: {
     paddingBottom: 20,

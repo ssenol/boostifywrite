@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, Pressable, Modal, Animated, StyleSheet, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fonts, radii } from '@/theme';
+import { colors, fonts, radii, layout } from '@/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -82,41 +82,43 @@ export default function AlertDialog({ visible, title, message, buttons, onClose 
           {/* Handle */}
           <View style={styles.handle} />
 
-          {/* Content */}
-          <View style={styles.content}>
-            <Text style={styles.title}>{title}</Text>
-            {message && <Text style={styles.message}>{message}</Text>}
-          </View>
+          <View style={styles.sheetContent}>
+            {/* Content */}
+            <View style={styles.content}>
+              <Text style={styles.title}>{title}</Text>
+              {message && <Text style={styles.message}>{message}</Text>}
+            </View>
 
-          {/* Buttons */}
-          <View style={styles.buttons}>
-            {buttons.map((button, index) => {
-              const buttonStyle = button.style || 'default';
-              const isCancel = buttonStyle === 'cancel';
-              
-              return (
-                <Pressable
-                  key={index}
-                  onPress={() => handleButtonPress(button)}
-                  style={({ pressed }) => [
-                    !isCancel && styles.button,
-                    !isCancel && (buttonStyle === 'destructive' ? styles.buttonDestructive : styles.buttonPrimary),
-                    !isCancel && pressed && styles.buttonPressed,
-                    isCancel && styles.cancelButton,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      !isCancel && styles.buttonText,
-                      buttonStyle === 'destructive' && styles.buttonTextDestructive,
-                      isCancel && styles.cancelButtonText,
+            {/* Buttons */}
+            <View style={styles.buttons}>
+              {buttons.map((button, index) => {
+                const buttonStyle = button.style || 'default';
+                const isCancel = buttonStyle === 'cancel';
+
+                return (
+                  <Pressable
+                    key={index}
+                    onPress={() => handleButtonPress(button)}
+                    style={({ pressed }) => [
+                      !isCancel && styles.button,
+                      !isCancel && (buttonStyle === 'destructive' ? styles.buttonDestructive : styles.buttonPrimary),
+                      !isCancel && pressed && styles.buttonPressed,
+                      isCancel && styles.cancelButton,
                     ]}
                   >
-                    {button.text}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <Text
+                      style={[
+                        !isCancel && styles.buttonText,
+                        buttonStyle === 'destructive' && styles.buttonTextDestructive,
+                        isCancel && styles.cancelButtonText,
+                      ]}
+                    >
+                      {button.text}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         </Animated.View>
       </Animated.View>
@@ -167,6 +169,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     color: colors.textSecondary,
+  },
+  sheetContent: {
+    width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center',
   },
   buttons: {
     gap: 10,

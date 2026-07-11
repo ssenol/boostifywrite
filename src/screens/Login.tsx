@@ -11,7 +11,7 @@ import Button from '@/components/Button';
 import AlertDialog from '@/components/AlertDialog';
 import { IconArrow, IconFaceId, IconTouchId } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
-import { colors, fonts, radii, type } from '@/theme';
+import { colors, fonts, radii, layout, type } from '@/theme';
 import type { RootStackParamList } from '@/navigation/types';
 import * as Biometric from '@/utils/biometric';
 import { login as apiLogin } from '@/api/auth';
@@ -189,69 +189,70 @@ export default function Login() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.body}>
-            <LogoLockup/>
+            <View style={styles.centerGroup}>
+              <LogoLockup/>
 
-            <View style={styles.hero}>
-              <View style={styles.kicker}>
-                <View style={styles.kickerLine}/>
-                <Text style={styles.kickerLabel}>SIGN IN</Text>
+              <View style={styles.hero}>
+                <View style={styles.kicker}>
+                  <View style={styles.kickerLine}/>
+                  <Text style={styles.kickerLabel}>SIGN IN</Text>
+                </View>
+                <Text style={styles.title}>
+                  Welcome <Text style={styles.emphBlue}>back!</Text>
+                </Text>
+                <Text style={styles.subtitle}>Please enter your details to sign in.</Text>
               </View>
-              <Text style={styles.title}>
-                Welcome <Text style={styles.emphBlue}>back!</Text>
-              </Text>
-              <Text style={styles.subtitle}>Please enter your details to sign in.</Text>
+
+              <View style={styles.form}>
+                <View style={styles.field}>
+                  <Text style={styles.label}>Username</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Student username"
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={username}
+                    onChangeText={setUsername}
+                    editable={!loading}
+                  />
+                </View>
+                <View style={styles.field}>
+                  <Text style={styles.label}>Password</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="••••••••"
+                    placeholderTextColor={colors.textTertiary}
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                    editable={!loading}
+                    onSubmitEditing={handleLogin}
+                  />
+                </View>
+              </View>
+
+              <View style={{ marginTop: 18 }}>
+                {loading ? (
+                  <ActivityIndicator color={colors.brandBlue} style={{ height: 52 }}/>
+                ) : (
+                  <>
+                    <Button kind="primary" onPress={handleLogin}
+                      icon={<IconArrow size={18} color="#fff"/>}>
+                      Sign in
+                    </Button>
+
+                    {biometricAvailable && biometricEnabled && (
+                      <Pressable onPress={handleBiometricLogin} style={styles.biometricBtn}>
+                        {getBiometricIcon()}
+                        <Text style={styles.biometricText}>{getBiometricLabel()}</Text>
+                      </Pressable>
+                    )}
+                  </>
+                )}
+              </View>
             </View>
 
-            <View style={styles.form}>
-              <View style={styles.field}>
-                <Text style={styles.label}>Username</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Student username"
-                  placeholderTextColor={colors.textTertiary}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={username}
-                  onChangeText={setUsername}
-                  editable={!loading}
-                />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  placeholderTextColor={colors.textTertiary}
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-                  editable={!loading}
-                  onSubmitEditing={handleLogin}
-                />
-              </View>
-            </View>
-
-            <View style={{ marginTop: 18 }}>
-              {loading ? (
-                <ActivityIndicator color={colors.brandBlue} style={{ height: 52 }}/>
-              ) : (
-                <>
-                  <Button kind="primary" onPress={handleLogin}
-                    icon={<IconArrow size={18} color="#fff"/>}>
-                    Sign in
-                  </Button>
-
-                  {biometricAvailable && biometricEnabled && (
-                    <Pressable onPress={handleBiometricLogin} style={styles.biometricBtn}>
-                      {getBiometricIcon()}
-                      <Text style={styles.biometricText}>{getBiometricLabel()}</Text>
-                    </Pressable>
-                  )}
-                </>
-              )}
-            </View>
-
-            <View style={{ flex: 1 }}/>
             <Text style={styles.backLink} onPress={() => nav.navigate('OnboardingWelcome')}>
               ← Back to Welcome
             </Text>
@@ -294,8 +295,9 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, padding: 24 },
-  hero: { marginTop: 90, gap: 12 },
+  body: { flex: 1, padding: 24, width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center' },
+  centerGroup: { flex: 1, justifyContent: 'center' },
+  hero: { marginTop: 32, gap: 12 },
   kicker: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   kickerLine: { width: 28, height: 2, borderRadius: 2, backgroundColor: colors.brandBlue },
   kickerLabel: { ...type.label, fontFamily: fonts.sansB, letterSpacing: 3, color: colors.textPrimary },

@@ -8,7 +8,7 @@ import { ScreenSurface } from '@/components/Screen';
 import AuthBackground from '@/components/AuthBackground';
 import { LogoLockup } from '@/components/Logo';
 import { IconArrow } from '@/components/Icons';
-import { colors, fonts, type, radii } from '@/theme';
+import { colors, fonts, type, radii, layout } from '@/theme';
 import type { RootStackParamList } from '@/navigation/types';
 
 const AUTO_NAV_MS = 2200;
@@ -72,7 +72,10 @@ export default function OnboardingWelcome() {
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, paddingHorizontal: 32, paddingTop: 40, paddingBottom: 40 },
+  body: {
+    flex: 1, paddingHorizontal: 32, paddingTop: 40, paddingBottom: 40,
+    width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center',
+  },
   hero: { flex: 1, justifyContent: 'center', marginTop: -40, gap: 20 },
   kicker: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   kickerLine: { width: 28, height: 2, borderRadius: 2, backgroundColor: colors.brandBlue },

@@ -10,9 +10,10 @@ import CompletedTaskCard from '@/components/CompletedTaskCard';
 import SectionHeader from '@/components/SectionHeader';
 import AlertDialog from '@/components/AlertDialog';
 import Avatar from '@/components/Avatar';
+import { useGridColumnWidth } from '@/hooks/useIsTablet';
 import { useAuth } from '@/context/AuthContext';
 import { fetchAssignedTasks, fetchCompletedReports } from '@/api';
-import { colors, fonts, radii, type } from '@/theme';
+import { colors, fonts, radii, spacing, type } from '@/theme';
 import type { HomeStackParamList } from '@/navigation/types';
 import type { AssignedExercise, CompletedExercise } from '@/types/api';
 import * as Biometric from '@/utils/biometric';
@@ -22,6 +23,9 @@ type Nav = NativeStackNavigationProp<HomeStackParamList>;
 export default function Home() {
   const nav    = useNavigation<Nav>();
   const { user } = useAuth();
+  const gridColumnWidth = useGridColumnWidth();
+  const isTablet = gridColumnWidth !== undefined;
+  const maxHomeItems = isTablet ? 6 : 5;
 
   const [tasks,     setTasks]     = useState<AssignedExercise[]>([]);
   const [completed, setCompleted] = useState<CompletedExercise[]>([]);
@@ -55,8 +59,8 @@ export default function Home() {
         }),
         fetchCompletedReports({ userId: user.userId, perPageCount: 20 }),
       ]);
-      setTasks(tasksRes.data.exercises.slice(0, 5));
-      setCompleted(reportsRes.data.exercises.slice(0, 5));
+      setTasks(tasksRes.data.exercises);
+      setCompleted(reportsRes.data.exercises);
       lastLoadTime.current = Date.now();
     } catch {
       setError('Could not load tasks. Pull down to retry.');
@@ -154,9 +158,11 @@ export default function Home() {
               label="ACTIVE"
               onViewAll={() => (nav.getParent() as any)?.navigate('AssignmentsStack', { screen: 'AllTasks' })}
             />
-            <View style={{ gap: 8 }}>
-              {tasks.map(ex => (
-                <AssignmentCard key={ex.id} exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
+            <View style={[styles.list, isTablet && styles.listGrid]}>
+              {tasks.slice(0, maxHomeItems).map(ex => (
+                <View key={ex.id} style={gridColumnWidth !== undefined && { width: gridColumnWidth }}>
+                  <AssignmentCard exercise={ex} onPress={() => nav.navigate('AssignmentDetail', { exercise: ex })}/>
+                </View>
               ))}
             </View>
           </View>
@@ -169,27 +175,28 @@ export default function Home() {
               label="COMPLETED"
               onViewAll={() => (nav.getParent() as any)?.navigate('ReportStack', { screen: 'Progress' })}
             />
-            <View style={{ gap: 8 }}>
-              {completed.map(c => {
+            <View style={[styles.list, isTablet && styles.listGrid]}>
+              {completed.slice(0, maxHomeItems).map(c => {
                 const bestAttempt = c.attempts[0];
                 return (
-                  <CompletedTaskCard
-                    key={c.assignedTaskId}
-                    exercise={c}
-                    onPress={() => {
-                      if (!bestAttempt) return;
-                      // Önce ReportStack'e geç, sonra Results'a git
-                      const parent = nav.getParent();
-                      parent?.navigate('ReportStack', { screen: 'Report' });
-                      // Report sayfası yüklendikten sonra Results'a git
-                      setTimeout(() => {
-                        parent?.navigate('ReportStack', {
-                          screen: 'Results',
-                          params: { solvedTaskId: bestAttempt.solvedTaskId },
-                        });
-                      }, 50);
-                    }}
-                  />
+                  <View key={c.assignedTaskId} style={gridColumnWidth !== undefined && { width: gridColumnWidth }}>
+                    <CompletedTaskCard
+                      exercise={c}
+                      onPress={() => {
+                        if (!bestAttempt) return;
+                        // Önce ReportStack'e geç, sonra Results'a git
+                        const parent = nav.getParent();
+                        parent?.navigate('ReportStack', { screen: 'Report' });
+                        // Report sayfası yüklendikten sonra Results'a git
+                        setTimeout(() => {
+                          parent?.navigate('ReportStack', {
+                            screen: 'Results',
+                            params: { solvedTaskId: bestAttempt.solvedTaskId },
+                          });
+                        }, 50);
+                      }}
+                    />
+                  </View>
                 );
               })}
             </View>
@@ -232,6 +239,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   greeting: { fontFamily: fonts.sansSb, fontSize: 26, letterSpacing: -0.5, color: colors.textPrimary },
+
+  list:     { gap: spacing.s2 },
+  listGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.s4 },
 
   errorBox:  { backgroundColor: colors.dangerSoft, borderRadius: radii.md, padding: 14, marginBottom: 16 },
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.danger },

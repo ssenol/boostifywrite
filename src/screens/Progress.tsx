@@ -9,6 +9,7 @@ import { ScreenSurface, ScreenScroll } from '@/components/Screen';
 import CompletedTaskCard from '@/components/CompletedTaskCard';
 import SectionHeader from '@/components/SectionHeader';
 import SwipeableRow from '@/components/SwipeableRow';
+import { useGridColumnWidth } from '@/hooks/useIsTablet';
 import { useAuth } from '@/context/AuthContext';
 import { fetchCompletedReports, deleteReport, fetchReportDetail } from '@/api';
 import { colors, fonts, radii, spacing, type } from '@/theme';
@@ -21,6 +22,8 @@ export default function Progress() {
   const { user } = useAuth();
   const nav   = useNavigation<NativeStackNavigationProp<ReportStackParamList>>();
   const route = useRoute<RouteProp<ReportStackParamList, 'Report'>>();
+  const gridColumnWidth = useGridColumnWidth();
+  const isTablet = gridColumnWidth !== undefined;
 
   const [exercises,  setExercises]  = useState<CompletedExercise[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -187,21 +190,19 @@ export default function Progress() {
               </View>
             )
           ) : (
-            <View style={{ gap: 8 }}>
+            <View style={[styles.list, isTablet && styles.listGrid]}>
               {exercises.filter(e => e.attempts[0]?.solvedTaskId !== pendingId).map((e) => {
                 const bestAttempt = e.attempts[0];
                 const card = (
                   <CompletedTaskCard
-                    key={e.assignedTaskId}
                     exercise={e}
                     onPress={() => bestAttempt && nav.navigate('Results', { solvedTaskId: bestAttempt.solvedTaskId })}
                   />
                 );
-                if (!__DEV__) return card;
                 return (
-                  <SwipeableRow key={e.assignedTaskId} onDelete={() => handleDelete(e)}>
-                    {card}
-                  </SwipeableRow>
+                  <View key={e.assignedTaskId} style={gridColumnWidth !== undefined && { width: gridColumnWidth }}>
+                    {__DEV__ ? <SwipeableRow onDelete={() => handleDelete(e)}>{card}</SwipeableRow> : card}
+                  </View>
                 );
               })}
             </View>
@@ -219,6 +220,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.hairline,
   },
   title: { fontFamily: fonts.sansSb, fontSize: 26, letterSpacing: -0.5, color: colors.textPrimary },
+
+  list:     { gap: spacing.s2 },
+  listGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.s4 },
 
   errorBox:  { backgroundColor: colors.dangerSoft, borderRadius: radii.md, padding: 14 },
   errorText: { fontFamily: fonts.sans, fontSize: 14, color: colors.danger },

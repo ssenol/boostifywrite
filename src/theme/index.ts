@@ -75,6 +75,11 @@ export const radii = {
   xs: 6, sm: 8, md: 12, lg: 16, xl: 20, pill: 9999,
 } as const;
 
+// ── Layout (geniş ekranlarda buton/aksiyon satırlarının genişliğini sınırlamak için) ──
+export const layout = {
+  maxActionWidth: 480,
+} as const;
+
 // ── Typography ──
 // font families: Manrope (sans, primary) + JetBrainsMono (mono, labels).
 // Both loaded via expo-font in App.tsx.
@@ -178,5 +183,5 @@ export const levelColor = (level: string): { fg: string; bg: string } => {
 };
 
 // Tek satır export — `import t from '@/theme'`
-const theme = { colors, spacing, radii, fonts, type, shadow, motion, levelColor, getCefrBand, CEFR_BANDS };
+const theme = { colors, spacing, radii, layout, fonts, type, shadow, motion, levelColor, getCefrBand, CEFR_BANDS };
 export default theme;

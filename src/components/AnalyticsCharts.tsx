@@ -158,65 +158,33 @@ export function RingMeter({ value, size = 140, thickness = 14, color = colors.wa
   );
 }
 
-export function RadarChart({ axes, color = colors.brandBlue }: {
-  axes: { label: string; value: number; dotColor: string }[]; color?: string;
+// Dikey sütun bar chart — CEFR Breakdown ile aynı görsel dil (değer üstte, bar ortada, etiket altta).
+export function ColumnBarChart({ items, max }: {
+  items: { key: string; label: string; value: number; color: string }[]; max?: number;
 }) {
-  const [width, setWidth] = useState(0);
-  const size = width;
-  const cx = size / 2, cy = size / 2;
-  const R = Math.max(0, size / 2 - 58);
-  const labelR = R + 26;
-  const n = axes.length;
-  const rings = [0.25, 0.5, 0.75, 1];
-
-  const angleFor = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / n;
-  const pointAt = (i: number, frac: number) => {
-    const a = angleFor(i);
-    return { x: cx + R * frac * Math.cos(a), y: cy + R * frac * Math.sin(a) };
-  };
-  const ringPath = (frac: number) =>
-    'M ' + axes.map((_, i) => { const p = pointAt(i, frac); return `${p.x} ${p.y}`; }).join(' L ') + ' Z';
-  const dataPath = 'M ' + axes.map((a, i) => {
-    const p = pointAt(i, Math.max(0, Math.min(100, a.value)) / 100);
-    return `${p.x} ${p.y}`;
-  }).join(' L ') + ' Z';
-
+  const maxValue = max ?? Math.max(1, ...items.map(i => i.value));
   return (
-    <View onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ width: '100%', aspectRatio: 1 }}>
-      {size > 0 && (
-        <>
-          <Svg width={size} height={size}>
-            {rings.map(r => (
-              <Path key={r} d={ringPath(r)} fill="none" stroke={colors.hairline} strokeWidth={1}/>
-            ))}
-            {axes.map((_, i) => {
-              const p = pointAt(i, 1);
-              return <Line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={colors.hairline} strokeWidth={1}/>;
-            })}
-            <Path d={dataPath} fill={color} fillOpacity={0.14} stroke={color} strokeWidth={2} strokeLinejoin="round"/>
-            {axes.map((a, i) => {
-              const p = pointAt(i, Math.max(0, Math.min(100, a.value)) / 100);
-              return <Circle key={i} cx={p.x} cy={p.y} r={4.5} fill={a.dotColor} stroke={colors.bgCard} strokeWidth={2}/>;
-            })}
-          </Svg>
-          {axes.map((a, i) => {
-            const p = pointAt(i, labelR / R);
-            return (
-              <View key={i} style={{ position: 'absolute', left: p.x - 34, top: p.y - 8, width: 68, alignItems: 'center' }}>
-                <Text style={styles.radarLabel} numberOfLines={1}>{a.label}</Text>
-              </View>
-            );
-          })}
-          {axes.map((a, i) => {
-            const p = pointAt(i, Math.max(0, Math.min(100, a.value)) / 100);
-            return (
-              <View key={`val-${i}`} style={{ position: 'absolute', left: p.x - 18, top: p.y - 22, width: 36, alignItems: 'center' }}>
-                <Text style={styles.radarValue} numberOfLines={1}>{Math.round(a.value)}</Text>
-              </View>
-            );
-          })}
-        </>
-      )}
+    <View>
+      <View style={styles.colCountRow}>
+        {items.map(i => (
+          <Text key={i.key} style={styles.colCount}>{i.value}</Text>
+        ))}
+      </View>
+      <View style={styles.colBarRow}>
+        {items.map(i => {
+          const h = Math.max(6, (Math.max(0, i.value) / maxValue) * 90);
+          return (
+            <View key={i.key} style={styles.colBarCol}>
+              <View style={[styles.colBar, { height: h, backgroundColor: i.color }]}/>
+            </View>
+          );
+        })}
+      </View>
+      <View style={styles.colLabelRow}>
+        {items.map(i => (
+          <Text key={i.key} style={styles.colLabel} numberOfLines={2}>{i.label}</Text>
+        ))}
+      </View>
     </View>
   );
 }
@@ -269,11 +237,16 @@ const styles = StyleSheet.create({
 
   ringValue: { fontFamily: fonts.sansEb, fontSize: 28, color: colors.textPrimary },
 
-  radarLabel: { fontFamily: fonts.sansSb, fontSize: 11, color: colors.textPrimary, textAlign: 'center' },
-  radarValue: { fontFamily: fonts.sansEb, fontSize: 11, color: colors.textPrimary, textAlign: 'center' },
-
   barLabel: { flex: 1, marginRight: 8, fontFamily: fonts.sansSb, fontSize: 13, color: colors.textPrimary },
   barValue: { fontFamily: fonts.sansEb, fontSize: 13 },
   barTrack: { height: 6, borderRadius: radii.pill, backgroundColor: colors.border, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: radii.pill },
+
+  colCountRow: { flexDirection: 'row', marginBottom: 6 },
+  colCount:    { flex: 1, textAlign: 'center', fontFamily: fonts.sansEb, fontSize: 13, color: colors.textPrimary },
+  colBarRow:   { flexDirection: 'row', alignItems: 'flex-end', height: 90 },
+  colBarCol:   { flex: 1, alignItems: 'center' },
+  colBar:      { width: '55%', maxWidth: 40, minWidth: 8, borderRadius: radii.xs },
+  colLabelRow: { flexDirection: 'row', marginTop: 6 },
+  colLabel:    { flex: 1, fontFamily: fonts.mono, fontSize: 10, color: colors.textSecondary, textAlign: 'center' },
 });

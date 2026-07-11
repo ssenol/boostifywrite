@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 
 import Card from '@/components/Card';
 import { BulletCard, SummaryCard } from '@/components/BulletCard';
+import ResponsiveTwoCol from '@/components/ResponsiveTwoCol';
 import { useReport, isInlineCorrection, findRubricCriteriaByKeyword, getLexicalRange } from '@/context/ReportContext';
 import type { AnnotatedQuote, VocabularyUpgrade } from '@/context/ReportContext';
 import { colors, fonts, type } from '@/theme';
@@ -71,19 +72,21 @@ export function VocabularyWordChoiceContent() {
         </>
       )}
 
-      {achievements.length > 0 && (
-        <>
-          <Text style={[type.label, { marginTop: 16, marginBottom: 6 }]}>ACHIEVEMENTS</Text>
-          <BulletCard items={achievements} kind="good" />
-        </>
-      )}
-
-      {stringIssues.length > 0 && (
-        <>
-          <Text style={[type.label, { marginTop: 16, marginBottom: 6 }]}>ISSUES</Text>
-          <BulletCard items={stringIssues} kind="bad" />
-        </>
-      )}
+      <ResponsiveTwoCol
+        style={{ marginTop: 16 }}
+        left={achievements.length > 0 && (
+          <View>
+            <Text style={[type.label, { marginBottom: 6 }]}>ACHIEVEMENTS</Text>
+            <BulletCard items={achievements} kind="good" />
+          </View>
+        )}
+        right={stringIssues.length > 0 && (
+          <View>
+            <Text style={[type.label, { marginBottom: 6 }]}>ISSUES</Text>
+            <BulletCard items={stringIssues} kind="bad" />
+          </View>
+        )}
+      />
 
       {!!summary && (
         <>

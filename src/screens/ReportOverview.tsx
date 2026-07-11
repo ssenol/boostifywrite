@@ -5,6 +5,8 @@ import Svg, { Circle as SvgCircle } from 'react-native-svg';
 import BottomSheet from '@/components/BottomSheet';
 import Card from '@/components/Card';
 import IconButton from '@/components/IconButton';
+import ResponsiveTwoCol from '@/components/ResponsiveTwoCol';
+import { useGridColumnWidth } from '@/hooks/useIsTablet';
 import { IconArrow, IconArrowUp, IconArrowDown, IconInfo, IconAlertTriangle } from '@/components/Icons';
 import {
   useReport,
@@ -13,7 +15,7 @@ import {
   getPlagiarismCheck,
   getAiDetectionCheck,
 } from '@/context/ReportContext';
-import { colors, fonts, radii, type, getCefrBand, CEFR_BANDS } from '@/theme';
+import { colors, fonts, radii, layout, type, getCefrBand, CEFR_BANDS } from '@/theme';
 import type { ResultsTab } from '@/navigation/types';
 
 const RUBRIC_DESCRIPTIONS = [
@@ -35,7 +37,7 @@ const RUBRIC_DESCRIPTIONS = [
   },
   {
     title: 'Mechanics',
-    body: "Your spelling and punctuation are mostly correct, which is great. However, you have several serious logic errors: 'the morning is darker and brighter for me' is contradictory (darker AND brighter?), and 'staying home to...",
+    body: 'Spelling, punctuation, and capitalization accuracy. Covers surface-level errors that affect readability but don\'t change your grammar or meaning score.',
   },
 ];
 
@@ -112,6 +114,7 @@ export function OverviewContent({ onTabChange }: Props) {
   const [rubricInfoOpen,      setRubricInfoOpen]      = useState(false);
   const [plagiarismSheetOpen, setPlagiarismSheetOpen] = useState(false);
   const [aiSheetOpen,         setAiSheetOpen]         = useState(false);
+  const gridColumnWidth = useGridColumnWidth();
   if (!report) return null;
 
   const rubricFeedback = getRubricCriteriaFeedback(report.result);
@@ -288,105 +291,115 @@ export function OverviewContent({ onTabChange }: Props) {
         </ScrollView>
       </BottomSheet>
 
-      {/* ── Hero ── */}
-      <View style={styles.heroCard}>
-        <View style={[styles.heroBlob, { backgroundColor: mainBand.color + '35' }]}/>
-        <View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Text style={[type.label, { color: colors.textInverseSoft }]}>OVERALL SCORE</Text>
-            <Text style={[type.labelSm, { color: colors.textInverseSoft }]}>
-              {new Date(report.solvedDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Text style={[styles.heroBig, { color: mainBand.color }]}>{report.mainScore.toFixed(0)}</Text>
-            <View style={{ gap: 6 }}>
-              <View style={[styles.cefrBadge, { backgroundColor: mainBand.color + '28', borderColor: mainBand.color + '55', alignSelf: 'flex-start' }]}>
-                <Text style={[styles.cefrText, { color: mainBand.color }]}>{report.cefrLevel}</Text>
+      {/* ── Hero + How we calculated ── */}
+      <ResponsiveTwoCol
+        left={
+          <View style={[styles.heroCard, { flex: 1 }]}>
+            <View style={[styles.heroBlob, { backgroundColor: mainBand.color + '35' }]}/>
+            <View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={[type.label, { color: colors.textInverseSoft }]}>OVERALL SCORE</Text>
+                <Text style={[type.labelSm, { color: colors.textInverseSoft }]}>
+                  {new Date(report.solvedDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
+                </Text>
               </View>
-              {bandDiff !== null && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  {bandDiff >= 0
-                    ? <IconArrowUp   size={12} color={mainBand.color}/>
-                    : <IconArrowDown size={12} color={colors.danger}/>
-                  }
-                  <Text style={[styles.insightText, { color: bandDiff >= 0 ? mainBand.color : colors.danger }]}>
-                    {bandDiff === 0
-                      ? `At target ${targetLevel}`
-                      : `${Math.abs(bandDiff)} band${Math.abs(bandDiff) > 1 ? 's' : ''} ${bandDiff > 0 ? 'above' : 'below'} target ${targetLevel}`
-                    }
-                  </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Text style={[styles.heroBig, { color: mainBand.color }]}>{report.mainScore.toFixed(0)}</Text>
+                <View style={{ gap: 6 }}>
+                  <View style={[styles.cefrBadge, { backgroundColor: mainBand.color + '28', borderColor: mainBand.color + '55', alignSelf: 'flex-start' }]}>
+                    <Text style={[styles.cefrText, { color: mainBand.color }]}>{report.cefrLevel}</Text>
+                  </View>
+                  {bandDiff !== null && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {bandDiff >= 0
+                        ? <IconArrowUp   size={12} color={mainBand.color}/>
+                        : <IconArrowDown size={12} color={colors.danger}/>
+                      }
+                      <Text style={[styles.insightText, { color: bandDiff >= 0 ? mainBand.color : colors.danger }]}>
+                        {bandDiff === 0
+                          ? `At target ${targetLevel}`
+                          : `${Math.abs(bandDiff)} band${Math.abs(bandDiff) > 1 ? 's' : ''} ${bandDiff > 0 ? 'above' : 'below'} target ${targetLevel}`
+                        }
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              )}
+              </View>
             </View>
           </View>
-        </View>
-      </View>
-
-      {/* ── HOW WE CALCULATED YOUR SCORE ── */}
-      <Card padding={16} style={{ marginTop: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-          <Text style={type.label}>HOW WE CALCULATED YOUR SCORE?</Text>
-          <View style={{ flex: 1 }}/>
-          <IconButton size={24} onPress={() => setRubricInfoOpen(true)}>
-            <IconInfo size={14} color={colors.textTertiary}/>
-          </IconButton>
-        </View>
-        <Text style={styles.scoringNote}>
-          Your final score is the weighted average of the rubric criteria below. Each criterion contributes by its weight (in %).
-        </Text>
-      </Card>
+        }
+        right={
+          <Card padding={16} style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={type.label}>HOW WE CALCULATED YOUR SCORE?</Text>
+              <View style={{ flex: 1 }}/>
+              <IconButton size={24} onPress={() => setRubricInfoOpen(true)}>
+                <IconInfo size={14} color={colors.textTertiary}/>
+              </IconButton>
+            </View>
+            <Text style={styles.scoringNote}>
+              Your final score is the weighted average of the rubric criteria below. Each criterion contributes by its weight (in %).
+            </Text>
+          </Card>
+        }
+      />
 
       {/* ── Rubric info bottom sheet ── */}
       <BottomSheet visible={rubricInfoOpen} onClose={() => setRubricInfoOpen(false)}>
-        <Text style={[type.label, { marginBottom: 16, paddingHorizontal: 4 }]}>SCORING CRITERIA</Text>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {RUBRIC_DESCRIPTIONS.map((item, i) => (
-            <View
-              key={i}
-              style={[
-                styles.rubricInfoItem,
-                i < RUBRIC_DESCRIPTIONS.length - 1 && styles.rubricInfoDivider,
-              ]}
-            >
-              <Text style={styles.rubricInfoTitle}>{item.title}</Text>
-              <Text style={styles.rubricInfoBody}>{item.body}</Text>
-            </View>
-          ))}
-          <View style={{ height: 8 }}/>
-        </ScrollView>
+        <View style={styles.rubricInfoContent}>
+          <Text style={[type.label, { marginBottom: 16, paddingHorizontal: 4 }]}>SCORING CRITERIA</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {RUBRIC_DESCRIPTIONS.map((item, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.rubricInfoItem,
+                  i < RUBRIC_DESCRIPTIONS.length - 1 && styles.rubricInfoDivider,
+                ]}
+              >
+                <Text style={styles.rubricInfoTitle}>{item.title}</Text>
+                <Text style={styles.rubricInfoBody}>{item.body}</Text>
+              </View>
+            ))}
+            <View style={{ height: 8 }}/>
+          </ScrollView>
+        </View>
       </BottomSheet>
 
       {/* ── Rubric criterion cards ── */}
       {rubricFeedback.length > 0 && (
-        <View style={{ marginTop: 12, gap: 10 }}>
+        <View style={[
+          { marginTop: 12, rowGap: 10 },
+          gridColumnWidth !== undefined && { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16 },
+        ]}>
           {rubricFeedback.map((cf, i) => {
             const tab  = criterionToConfig(cf.criterion).tab;
             const band = getCefrBand(cf.score);
             const obs  = cf.observation ?? '';
             const preview = obs.length > 150 ? obs.slice(0, 150) + '...' : obs;
             return (
-              <Card
-                key={i}
-                padding={16}
-                onPress={() => onTabChange(tab)}
-                style={{ borderLeftWidth: 3, borderLeftColor: band.color }}
-              >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1, marginRight: 12 }}>
-                    <Text style={styles.criterionName}>{cf.criterion}</Text>
-                    {!!cf.weight && (
-                      <Text style={styles.weightText}>{cf.weight}</Text>
-                    )}
+              <View key={i} style={gridColumnWidth !== undefined ? { width: gridColumnWidth } : undefined}>
+                <Card
+                  padding={16}
+                  onPress={() => onTabChange(tab)}
+                  style={{ borderLeftWidth: 3, borderLeftColor: band.color }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1, marginRight: 12 }}>
+                      <Text style={styles.criterionName}>{cf.criterion}</Text>
+                      {!!cf.weight && (
+                        <Text style={styles.weightText}>{cf.weight}</Text>
+                      )}
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                      <Text style={[styles.dimScore, { color: band.color }]}>{cf.score.toFixed(0)}</Text>
+                    </View>
                   </View>
-                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                    <Text style={[styles.dimScore, { color: band.color }]}>{cf.score.toFixed(0)}</Text>
-                  </View>
-                </View>
-                {!!preview && (
-                  <Text style={styles.observationText}>{preview}</Text>
-                )}
-              </Card>
+                  {!!preview && (
+                    <Text style={styles.observationText}>{preview}</Text>
+                  )}
+                </Card>
+              </View>
             );
           })}
         </View>
@@ -528,6 +541,7 @@ const styles = StyleSheet.create({
   feedbackText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 22, color: colors.textSecondary },
 
   // Rubric info bottom sheet
+  rubricInfoContent: { width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center' },
   rubricInfoItem:    { paddingVertical: 16 },
   rubricInfoDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline },
   rubricInfoTitle:   { fontFamily: fonts.sansSb, fontSize: 16, color: colors.brandBlue, marginBottom: 6 },
