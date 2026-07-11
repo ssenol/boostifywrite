@@ -145,7 +145,7 @@ export default function Progress() {
     <ScreenSurface>
       <View style={styles.header}>
         <Text style={[type.label, { marginBottom: 4 }]}>YOUR JOURNEY</Text>
-        <Text style={styles.title}>Progress</Text>
+        <Text style={styles.title}>Completed Tasks</Text>
       </View>
 
       <ScreenScroll
@@ -176,7 +176,6 @@ export default function Progress() {
 
         {/* Tamamlananlar */}
         <View>
-          <SectionHeader label="COMPLETED"/>
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>

@@ -105,7 +105,7 @@ export default function AllTasks() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={type.label}>ALL ASSIGNMENTS · {filtered.length}</Text>
+          <Text style={type.label}>ASSIGNMENTS</Text>
           <Text style={styles.title}>Your Tasks</Text>
         </View>
         <Pressable
