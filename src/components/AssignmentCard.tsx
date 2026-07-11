@@ -5,6 +5,7 @@ import Card from '@/components/Card';
 import LevelBadge from '@/components/LevelBadge';
 import { IconChevRight } from '@/components/Icons';
 import { colors, fonts, radii, levelColor } from '@/theme';
+import { getMobileCoverImage } from '@/utils/images';
 import type { AssignedExercise } from '@/types/api';
 
 function capitalize(str: string): string {
@@ -26,11 +27,12 @@ export default function AssignmentCard({ exercise: ex, onPress }: Props) {
   const due         = formatDue(ex.dueDate);
   const accentColor = levelColor(meta.cefrLevel).fg;
   const hasBanner   = !!ex.coverImage;
+  const bannerUri   = hasBanner ? getMobileCoverImage(ex.coverImage, ex.coverImageVariants) : undefined;
 
   return (
     <Card accent={accentColor} padding={hasBanner ? 0 : 16} onPress={onPress}>
       {hasBanner && (
-        <Image source={{ uri: ex.coverImage }} style={styles.banner} resizeMode="cover"/>
+        <Image source={{ uri: bannerUri }} style={styles.banner} resizeMode="cover"/>
       )}
       <View style={[styles.row, hasBanner && styles.rowPadded]}>
         <View style={{ flex: 1, marginLeft: 6 }}>

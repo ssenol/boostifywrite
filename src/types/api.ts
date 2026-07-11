@@ -97,6 +97,11 @@ export type AssignedExercise = {
   remainingAttemptCount: number;
   assignmentBanner: string;
   coverImage: string;
+  coverImageVariants?: {
+    original?: string;
+    small?: string;
+    medium?: string;
+  };
   assignmentCalculationOfResultType: string;
   assignmentRepeatCount: number;
   assignmentTimeLimit: number;
