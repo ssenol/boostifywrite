@@ -176,7 +176,11 @@ export default function RootNavigator() {
           <RootStack.Screen name="Main" component={MainTabs}/>
         ) : (
           <>
-            <RootStack.Screen name="OnboardingWelcome" component={OnboardingWelcome}/>
+            <RootStack.Screen
+              name="OnboardingWelcome"
+              component={OnboardingWelcome}
+              options={{ animation: 'slide_from_left' }}
+            />
             <RootStack.Screen name="Login"             component={Login}/>
           </>
         )}

@@ -38,17 +38,19 @@ export default function OnboardingWelcome() {
       <AuthBackground/>
 
       <View style={styles.body}>
-        <LogoLockup/>
+        <View style={styles.centerGroup}>
+          <LogoLockup/>
 
-        <View style={styles.hero}>
-          <View style={styles.kicker}>
-            <View style={styles.kickerLine}/>
-            <Text style={styles.kickerLabel}>WELCOME</Text>
+          <View style={styles.hero}>
+            <View style={styles.kicker}>
+              <View style={styles.kickerLine}/>
+              <Text style={styles.kickerLabel}>WELCOME</Text>
+            </View>
+            <Text style={styles.title}>
+              Write better <Text style={styles.emphBlue}>essays.</Text>{'\n'}
+              Level up your <Text style={styles.emphGreen}>English.</Text>
+            </Text>
           </View>
-          <Text style={styles.title}>
-            Write better <Text style={styles.emphBlue}>essays.</Text>{'\n'}
-            Level up your <Text style={styles.emphGreen}>English.</Text>
-          </Text>
         </View>
 
         <View style={styles.footer}>
@@ -76,7 +78,8 @@ const styles = StyleSheet.create({
     flex: 1, paddingHorizontal: 32, paddingTop: 40, paddingBottom: 40,
     width: '100%', maxWidth: layout.maxActionWidth, alignSelf: 'center',
   },
-  hero: { flex: 1, justifyContent: 'center', marginTop: -40, gap: 20 },
+  centerGroup: { flex: 1, justifyContent: 'center' },
+  hero: { marginTop: 32, gap: 20 },
   kicker: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   kickerLine: { width: 28, height: 2, borderRadius: 2, backgroundColor: colors.brandBlue },
   kickerLabel: { ...type.label, fontFamily: fonts.sansB, letterSpacing: 3, color: colors.textPrimary },

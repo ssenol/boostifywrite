@@ -12,7 +12,8 @@ import {
   useReport, getQuestionText, getUserResponseText, getMechanicsIssues, getOutlineCompliance,
 } from '@/context/ReportContext';
 import type { OutlineSection } from '@/context/ReportContext';
-import { colors, fonts, radii, shadow, type } from '@/theme';
+import { colors, fonts, radii, shadow, layout, type } from '@/theme';
+import { useGridColumnWidth } from '@/hooks/useIsTablet';
 import type { InlineCorrection } from '@/types/api';
 
 const { height: SCREEN_H } = Dimensions.get('window');
@@ -24,7 +25,7 @@ type CatDef = { id: string; key: string; label: string; bg: string; color: strin
 
 const CATEGORY_DEFS: CatDef[] = [
   { id: 'all',            key: 'all',                    label: 'All',                    bg: '#E7E9FF', color: '#929DFF', border: '#ABB3FF' },
-  { id: 'grammar',        key: 'grammar-error',          label: 'Grammar',                bg: '#F0F0F0', color: '#6c6c6c', border: '#808080' },
+  { id: 'grammar',        key: 'grammar-error',          label: 'Grammar',                bg: '#d5d5d5', color: '#4A4A4A', border: '#808080' },
   { id: 'spelling',       key: 'spelling-error',         label: 'Spelling',               bg: '#FFF8C4', color: '#BAAD23', border: '#DACD38' },
   { id: 'punctuation',    key: 'punctuation-error',      label: 'Punctuation',            bg: '#DCFFD6', color: '#65C653', border: '#84E473' },
   { id: 'capitalization', key: 'capitalization-error',   label: 'Capitalization',         bg: '#FEEDFF', color: '#BE59C2', border: '#FDBCFF' },
@@ -282,6 +283,7 @@ function OutlineModal({ section, onClose }: { section: OutlineSection; onClose: 
 // ── WritingList ──────────────────────────────────────────────────────────────
 export function WritingList({ bsTab, lcFilter, modalIdx, setBsTab, setLcFilter, setModalIdx }: WritingSharedState) {
   const { report } = useReport();
+  const isTablet = useGridColumnWidth() !== undefined;
 
   const questionText = report ? getQuestionText(report.result) : null;
   const responseText = report ? getUserResponseText(report.result) : null;
@@ -360,7 +362,7 @@ export function WritingList({ bsTab, lcFilter, modalIdx, setBsTab, setLcFilter, 
         </View>
       )}
 
-      <View style={{ height: 180 }} />
+      <View style={{ height: isTablet ? 250 : 180 }} />
 
       {safeIdx !== null && modalList[safeIdx] && (
         <ErrorModal
@@ -384,6 +386,7 @@ export function WritingBottomSheet({ bsTab, setBsTab, lcFilter, setLcFilter, set
   const [expanded, setExpanded] = useState(true);
   const [outlineSection, setOutlineSection] = useState<OutlineSection | null>(null);
   const insets = useSafeAreaInsets();
+  const isTablet = useGridColumnWidth() !== undefined;
 
   const allIssues   = report ? getMechanicsIssues(report.result) : [];
   const responseText = report ? getUserResponseText(report.result) : null;
@@ -452,7 +455,7 @@ export function WritingBottomSheet({ bsTab, setBsTab, lcFilter, setLcFilter, set
 
       {/* İçerik — expanded'da sabit yükseklik, sekmeler arası kayma yok */}
       {expanded && (
-        <View style={styles.bsContent}>
+        <View style={[styles.bsContent, isTablet && { height: 220 }]}>
           {bsTab === 'Language Convention' && (
             <ScrollView
               contentContainerStyle={styles.pillsWrap}
@@ -579,6 +582,8 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
+    maxWidth: layout.maxActionWidth,
+    alignSelf: 'center',
     height: SCREEN_H * 0.42,
     backgroundColor: colors.bgCard,
     borderRadius: radii.lg,
