@@ -3,6 +3,7 @@
 
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
+import { Image, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -17,6 +18,7 @@ import {
 
 import RootNavigator from '@/navigation';
 import { AuthProvider } from '@/context/AuthContext';
+import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -26,14 +28,21 @@ export default function App() {
     JetBrainsMono_500Medium, JetBrainsMono_600SemiBold,
   });
 
+  // Android'de native splash API'si görseli her zaman küçük bir simgeye
+  // sığdırıyor (OS kısıtı, config ile aşılamıyor) — bu yüzden native splash'ı
+  // hemen kapatıp aynı görseli tam ekran kendi View'ımızla gösteriyoruz.
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   if (!loaded) {
-    return null;
+    return (
+      <Image
+        source={require('./assets/splash.png')}
+        resizeMode="cover"
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.brandBlue }]}
+      />
+    );
   }
   return (
     <SafeAreaProvider>
