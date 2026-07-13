@@ -2,10 +2,10 @@
 // type/family rules in theme/index.ts resolve correctly.
 
 import 'react-native-gesture-handler';
-import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as SplashScreen from 'expo-splash-screen';
 
 import {
   useFonts,
@@ -17,19 +17,23 @@ import {
 
 import RootNavigator from '@/navigation';
 import { AuthProvider } from '@/context/AuthContext';
-import { colors } from '@/theme';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
   const [loaded] = useFonts({
     Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold,
     JetBrainsMono_500Medium, JetBrainsMono_600SemiBold,
   });
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
   if (!loaded) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgApp }}>
-        <ActivityIndicator color={colors.brandBlue}/>
-      </View>
-    );
+    return null;
   }
   return (
     <SafeAreaProvider>
