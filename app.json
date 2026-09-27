@@ -51,7 +51,15 @@
           "cameraPermission": "BoostifyWrite uses camera access to allow students to capture and upload profile photos for their educational account."
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

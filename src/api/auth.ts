@@ -1,5 +1,5 @@
 // Auth endpoint'leri — login, refresh, avatar upload
-import { request } from './client';
+import { imageFormPart, request } from './client';
 import type { LoginResponse, RefreshTokenResponse, User } from '@/types/api';
 
 export async function login(username: string, password: string): Promise<LoginResponse> {
@@ -18,15 +18,8 @@ export async function refreshToken(refreshToken: string): Promise<RefreshTokenRe
 }
 
 export async function uploadAvatar(imageUri: string, user: User): Promise<string> {
-  const filename = imageUri.split('/').pop() ?? 'avatar.jpg';
-  const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
-  const mimeMap: Record<string, string> = {
-    jpg: 'image/jpeg', jpeg: 'image/jpeg',
-    png: 'image/png', gif: 'image/gif', webp: 'image/webp',
-  };
-
   const formData = new FormData();
-  formData.append('file', { uri: imageUri, name: filename, type: mimeMap[ext] ?? 'image/jpeg' } as unknown as Blob);
+  formData.append('file', imageFormPart(imageUri, 'avatar.jpg'));
   formData.append('userId', user.userId);
   formData.append('role', 'student');
   formData.append('username', user.username);

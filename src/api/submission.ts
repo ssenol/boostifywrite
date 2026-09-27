@@ -1,5 +1,5 @@
 // Yazma gönderimi ve OCR endpoint'leri
-import { request } from './client';
+import { imageFormPart, request } from './client';
 import type { SubmitWritingResponse, ImageToTextResponse } from '@/types/api';
 
 export async function submitWriting(
@@ -15,17 +15,7 @@ export async function submitWriting(
 
 export async function imageToText(imageUri: string): Promise<string> {
   const formData = new FormData();
-  const filename = imageUri.split('/').pop() ?? 'image.jpg';
-  const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
-  const mimeMap: Record<string, string> = {
-    jpg: 'image/jpeg', jpeg: 'image/jpeg',
-    png: 'image/png', gif: 'image/gif', webp: 'image/webp',
-  };
-  formData.append('file', {
-    uri: imageUri,
-    name: filename,
-    type: mimeMap[ext] ?? 'image/jpeg',
-  } as unknown as Blob);
+  formData.append('file', imageFormPart(imageUri, 'image.jpg'));
 
   const res = await request<ImageToTextResponse>('/question/image-to-text', {
     method: 'POST',

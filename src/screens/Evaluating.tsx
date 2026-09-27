@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   heroSubtitle: { marginTop: 8, textAlign: 'center', fontFamily: fonts.sans, fontSize: 14, color: colors.textSecondary, lineHeight: 21 },
 
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  divider:  { borderBottomWidth: 1, borderBottomColor: colors.hairline, borderStyle: 'dashed' },
+  divider:  { borderBottomWidth: 1, borderColor: colors.hairline, borderStyle: 'dashed' },
   radio:    { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   radioDot: { width: 8, height: 8, borderRadius: 4 },
   itemLabel:  { flex: 1, fontSize: 14.5 },

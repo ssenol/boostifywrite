@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   assigned: { fontFamily: fonts.sans, fontSize: 13, color: colors.textSecondary, marginTop: 6 },
 
   structRow:     { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 11 },
-  structDivider: { borderBottomWidth: 1, borderBottomColor: colors.hairline, borderStyle: 'dashed' },
+  structDivider: { borderBottomWidth: 1, borderColor: colors.hairline, borderStyle: 'dashed' },
   structPara:    { fontFamily: fonts.monoSb, fontSize: 14, color: colors.brandBlue, width: 20, paddingTop: 2 },
   structText:    { fontFamily: fonts.sans, fontSize: 14, color: colors.textPrimary },
   structPurpose: { fontFamily: fonts.sans, fontSize: 11, color: colors.textTertiary, marginTop: 2 },

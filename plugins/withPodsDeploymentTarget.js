@@ -7,9 +7,9 @@ const { withPodfile } = require('expo/config-plugins');
 
 const MARKER = '# withPodsDeploymentTarget';
 
-const SNIPPET = `
+const snippet = (fallback) => `
     ${MARKER}
-    app_target = (podfile_properties['ios.deploymentTarget'] || '15.1')
+    app_target = (podfile_properties['ios.deploymentTarget'] || '${fallback}')
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |build_config|
         current = build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
@@ -28,7 +28,12 @@ module.exports = function withPodsDeploymentTarget(config) {
     if (!anchor.test(podfile)) {
       throw new Error('withPodsDeploymentTarget: Podfile içinde react_native_post_install bulunamadı');
     }
-    cfg.modResults.contents = podfile.replace(anchor, `$1\n${SNIPPET}`);
+    // Yedek hedef, Expo'nun Podfile'daki `platform :ios` varsayılanından okunur (SDK'ya göre değişir).
+    const platform = podfile.match(/platform :ios,.*\|\|\s*'([\d.]+)'/);
+    if (!platform) {
+      throw new Error('withPodsDeploymentTarget: Podfile içinde platform :ios satırı bulunamadı');
+    }
+    cfg.modResults.contents = podfile.replace(anchor, `$1\n${snippet(platform[1])}`);
     return cfg;
   });
 };

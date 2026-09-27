@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   divider: {
-    borderBottomWidth: 1, borderBottomColor: colors.hairline,
+    borderBottomWidth: 1, borderColor: colors.hairline,
     borderStyle: 'dashed',
   },
   text: {

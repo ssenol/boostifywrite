@@ -1,4 +1,5 @@
 // HTTP istemcisi — base URL, auth header, otomatik 401 → token yenileme
+import { File } from 'expo-file-system';
 import { getAccessToken, getRefreshToken, updateAccessToken } from '@/store/auth';
 
 export const BASE_URL = 'https://quizmaker-api.onrender.com/api/v0.0.1';
@@ -35,6 +36,25 @@ export class ApiRequestError extends Error {
     super(message);
     this.name = 'ApiRequestError';
   }
+}
+
+const IMAGE_MIME: Record<string, string> = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg',
+  png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+};
+
+// Yerel görsel URI'sinden FormData dosya parçası üretir.
+// SDK 57'den beri global fetch = expo/fetch; kodlayıcısı RN'nin { uri, name, type } parçasını
+// reddeder, içeriği `bytes()` üzerinden okur. `uri` ise RN fetch'e dönülürse diye korunur.
+export function imageFormPart(uri: string, fallbackName: string): Blob {
+  const name = uri.split('/').pop() || fallbackName;
+  const ext = name.split('.').pop()?.toLowerCase() ?? 'jpg';
+  return {
+    uri,
+    name,
+    type: IMAGE_MIME[ext] ?? 'image/jpeg',
+    bytes: () => new File(uri).bytes(),
+  } as unknown as Blob;
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
