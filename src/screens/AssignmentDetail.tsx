@@ -1,6 +1,6 @@
 // 03 · Assignment Detail — gerçek exercise parametresiyle çalışır
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, Pressable, ScrollView, LayoutAnimation, Platform, UIManager, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Image, Pressable, ScrollView, LayoutAnimation, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -44,10 +44,6 @@ const RUBRIC_COLORS = [
 
 // Score seviyesi için renk — en yüksekten en düşüğe
 const LEVEL_COLORS = ['#16A34A', '#65A30D', '#CA8A04', '#EA580C', '#DC2626'];
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 export default function AssignmentDetail() {
   const nav      = useNavigation<Nav>();
