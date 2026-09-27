@@ -62,7 +62,7 @@ export default function BottomSheet({ visible, onClose, children, maxHeight = '8
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
   panel: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: colors.bgCard,

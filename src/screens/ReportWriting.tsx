@@ -157,7 +157,7 @@ function ErrorModal({ issue, index, total, onPrev, onNext, onClose }: {
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         {/* Backdrop tap → close */}
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
         <View style={styles.modalCard}>
           {/* Üst satır: tür başlığı + X */}
@@ -230,7 +230,7 @@ function OutlineModal({ section, onClose }: { section: OutlineSection; onClose: 
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={[styles.modalCard, { height: SCREEN_H * 0.72 }]}>
           <View style={styles.modalTopRow}>
             <Text style={[styles.errorCatLabel, { color: colors.textPrimary, flex: 1 }]}>{section.section}</Text>

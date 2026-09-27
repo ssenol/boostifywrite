@@ -122,7 +122,7 @@ export function DonutChart({ segments, centerValue, centerLabel, size = 150, thi
           })}
         </G>
       </Svg>
-      <View style={[StyleSheet.absoluteFillObject, { alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={styles.donutCenterValue}>{centerValue}</Text>
         <Text style={styles.donutCenterLabel}>{centerLabel}</Text>
       </View>
@@ -151,7 +151,7 @@ export function RingMeter({ value, size = 140, thickness = 14, color = colors.wa
           />
         )}
       </Svg>
-      <View style={[StyleSheet.absoluteFillObject, { alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={styles.ringValue}>{Math.round(value)}%</Text>
       </View>
     </View>

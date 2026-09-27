@@ -50,7 +50,8 @@
           "photosPermission": "BoostifyWrite uses photo library access to allow students to select and upload profile photos for their educational account.",
           "cameraPermission": "BoostifyWrite uses camera access to allow students to capture and upload profile photos for their educational account."
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "extra": {
       "eas": {

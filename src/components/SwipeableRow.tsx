@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
   },
   deleteBack: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.danger,
     flexDirection: 'row',
     alignItems: 'center',

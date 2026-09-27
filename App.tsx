@@ -40,7 +40,7 @@ export default function App() {
       <Image
         source={require('./assets/splash.png')}
         resizeMode="cover"
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.brandBlue }]}
+        style={[StyleSheet.absoluteFill, { backgroundColor: colors.brandBlue }]}
       />
     );
   }

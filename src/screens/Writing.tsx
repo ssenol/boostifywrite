@@ -315,7 +315,7 @@ export default function Writing() {
           />
           {keyboardHeight === 0 && !submitting && (
             <Pressable
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
               onPress={() => inputRef.current?.focus()}
             />
           )}
