@@ -6,7 +6,7 @@ Bu dosyayı Claude Code her oturumda otomatik okur. Projeyi anlamak ve doğru ka
 
 CEFR-tabanlı (A1–C1) İngilizce yazma uygulaması. Lise öğrencileri için yazma ödevi alıp, yazıp, AI ile değerlendirme alıyorlar. 4 rubric dimension üzerinden puanlanıyor: Task Achievement, Coherence & Cohesion, Lexical Range, Grammatical Accuracy.
 
-**Hedef platform:** iOS + Android (Expo SDK 54, React Native 0.81.5, React 19.1, New Architecture açık).
+**Hedef platform:** iOS + Android (Expo SDK 57, React Native 0.86, React 19.2, New Architecture zorunlu).
 
 ## Stack
 
@@ -95,6 +95,10 @@ import { colors, spacing, type, radii, shadow } from '@/theme';
 
 - `npm run typecheck` → `tsc --noEmit` çalışır. **Her PR öncesi temiz olmalı.**
 - Test runner kurulu değil. Eklenecekse: Jest + React Native Testing Library standart.
+
+## Session notları
+
+- [Yerel Android build ve cihaz testi](.claude/notes/android-local-build.md): JDK/SDK kurulumu, APK derleme, `adb` ile kurulum. Xcode 27 (Device Hub, signing team) notları da burada.
 
 ## HTML prototip referansı
 
