@@ -6,7 +6,7 @@ Bu dosyayı Claude Code her oturumda otomatik okur. Projeyi anlamak ve doğru ka
 
 CEFR-tabanlı (A1–C1) İngilizce yazma uygulaması. Lise öğrencileri için yazma ödevi alıp, yazıp, AI ile değerlendirme alıyorlar. 4 rubric dimension üzerinden puanlanıyor: Task Achievement, Coherence & Cohesion, Lexical Range, Grammatical Accuracy.
 
-**Hedef platform:** iOS + Android (Expo SDK 52, React Native 0.76, New Architecture açık).
+**Hedef platform:** iOS + Android (Expo SDK 54, React Native 0.81.5, React 19.1, New Architecture açık).
 
 ## Stack
 
