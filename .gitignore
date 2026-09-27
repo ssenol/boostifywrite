@@ -17,3 +17,7 @@ yarn-error.*
 
 # Google service account anahtarları
 boostifyapps-*.json
+
+# CNG: native klasörler prebuild ile üretilir, commit edilmez
+/ios
+/android
