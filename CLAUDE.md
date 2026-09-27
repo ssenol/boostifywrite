@@ -99,6 +99,7 @@ import { colors, spacing, type, radii, shadow } from '@/theme';
 ## Session notları
 
 - [Yerel Android build ve cihaz testi](.claude/notes/android-local-build.md): JDK/SDK kurulumu, APK derleme, `adb` ile kurulum. Xcode 27 (Device Hub, signing team) notları da burada.
+- [Token'ların ve şifrenin güvenli depolanması](.claude/notes/guvenli-depolama.md) (yapılacak): token'lar ve biyometrik şifre AsyncStorage'da düz metin; `expo-secure-store`'a taşıma planı, mevcut kullanıcılar için taşıma ve yeniden kurulum kuralları. boostifyspeak'teki çözüme dayanıyor.
 
 ## HTML prototip referansı
 
