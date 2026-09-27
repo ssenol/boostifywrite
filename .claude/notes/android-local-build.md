@@ -54,6 +54,8 @@ SDK hiç yoksa: Android Studio'yu kurup SDK Manager'dan yukarıdakileri seçmek 
 ```sh
 # Native projeyi üret (package.json veya app.json değiştiyse, ya da android/ yoksa)
 CI=1 npx expo prebuild --clean --platform android
+# ⚠️ --clean klasörü silip yeniden oluşturur, Dropbox ignore işareti gider. Her seferinde tekrarla:
+xattr -w com.dropbox.ignored 1 android ios
 # ⚠️ prebuild package.json'daki "ios"/"android" script'lerini "expo run:*" yapar.
 #    Commit'lemeden önce sadece o iki satırı geri al (git checkout package.json KULLANMA).
 
@@ -81,7 +83,8 @@ olduğunu görmek için ayrı tutuldu.
 - **Log'lar:** `adb logcat -d -t 400 | grep -iE "ReactNativeJS|AndroidRuntime|FATAL"`
 - **"Refreshing..." banner'ı sürekli çıkıyorsa:** `metro.config.js` kökteki `ios/` ve `android/`'i
   izlemeden çıkarır. Proje Dropbox'ta olduğu için Dropbox bu klasörlere sürekli dokunuyor.
-  İsteğe bağlı: `xattr -w com.dropbox.ignored 1 android ios node_modules`.
+  Bu makinede `android`, `ios` ve `node_modules` Dropbox'ta ignored (`xattr -w com.dropbox.ignored 1 ...`).
+  Yeni makinede ilk klonlamadan sonra da uygula.
 - **Test edilen:** Samsung Galaxy Tab A9+ (SM-X210), Android 16 / API 36. Edge-to-edge zorunlu:
   TabBar sistem nav bar'ın üstünde, döndürme, upload'lar (expo/fetch), modaller sorunsuz.
 
