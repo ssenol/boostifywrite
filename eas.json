@@ -5,8 +5,11 @@
   },
   "build": {
     "development": {
-      "distribution": "internal",
       "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "development"
+      },
       "ios": {
         "resourceClass": "m-medium",
         "simulator": false

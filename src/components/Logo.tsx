@@ -1,4 +1,4 @@
-// Logo — assets/icon.png (app icon ile birebir aynı mark) + Manrope wordmark.
+// Logo — assets/images/icon.png (app icon ile birebir aynı mark) + Manrope wordmark.
 import React from 'react';
 import { Image, View, Text, StyleSheet } from 'react-native';
 import { colors, fonts } from '@/theme';
@@ -6,7 +6,7 @@ import { colors, fonts } from '@/theme';
 export function LogoMark({ size = 44 }: { size?: number }) {
   return (
     <Image
-      source={require('@/../assets/icon.png')}
+      source={require('@/../assets/images/icon.png')}
       style={{ width: size, height: size, borderRadius: size * 0.26 }}
     />
   );

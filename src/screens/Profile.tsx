@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { uploadAvatar } from '@/api/auth';
 import { colors, fonts, radii, layout, type } from '@/theme';
 import * as Biometric from '@/utils/biometric';
+import { IS_DEV_MODE } from '@/config/env';
 
 const SETTINGS: { label: string; value: string }[] = [
   // { label: 'Privacy',        value: '' },
@@ -236,8 +237,8 @@ export default function Profile() {
           <Text style={styles.signOutText}>Sign Out</Text>
         </Pressable>
 
-        {/* Reset Data — yalnızca DEV */}
-        {__DEV__ && (
+        {/* Reset Data — yalnızca dev sürümünde */}
+        {IS_DEV_MODE && (
           <Pressable style={styles.resetData} onPress={() => setShowResetDataDialog(true)}>
             <Text style={styles.resetDataText}>Reset All Data</Text>
           </Pressable>

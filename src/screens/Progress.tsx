@@ -13,6 +13,7 @@ import { useGridColumnWidth } from '@/hooks/useIsTablet';
 import { useAuth } from '@/context/AuthContext';
 import { fetchCompletedReports, deleteReport, fetchReportDetail } from '@/api';
 import { colors, fonts, radii, spacing, type } from '@/theme';
+import { IS_DEV_MODE } from '@/config/env';
 import type { CompletedExercise } from '@/types/api';
 import type { ReportStackParamList } from '@/navigation/types';
 
@@ -201,7 +202,7 @@ export default function Progress() {
                 );
                 return (
                   <View key={e.assignedTaskId} style={gridColumnWidth !== undefined && { width: gridColumnWidth }}>
-                    {__DEV__ ? <SwipeableRow onDelete={() => handleDelete(e)}>{card}</SwipeableRow> : card}
+                    {IS_DEV_MODE ? <SwipeableRow onDelete={() => handleDelete(e)}>{card}</SwipeableRow> : card}
                   </View>
                 );
               })}

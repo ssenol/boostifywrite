@@ -21,3 +21,5 @@ boostifyapps-*.json
 # CNG: native klasörler prebuild ile üretilir, commit edilmez
 /ios
 /android
+
+/_calismalar/

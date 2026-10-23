@@ -22,7 +22,7 @@ Kullanan yerler: `src/context/AuthContext.tsx`, `src/api/client.ts`, `src/screen
 npx expo install expo-secure-store
 ```
 
-`app.json` → `plugins`'e `"expo-secure-store"` eklenir. Ardından `npx expo prebuild --clean` ve yeni build
+`app.config.js` → `plugins`'e `"expo-secure-store"` eklenir. Ardından `npm run prebuild:dev -- --clean` ve yeni build
 (Reload yetmez). Prebuild sonrası Signing Team yeniden seçilmeli ve `xattr -w com.dropbox.ignored 1 ios android`
 tekrarlanmalı.
 

@@ -1,4 +1,4 @@
-// SwipeableRow — sağa kaydırarak silme (yalnızca __DEV__)
+// SwipeableRow — sağa kaydırarak silme (yalnızca dev sürümünde, bkz. IS_DEV_MODE)
 import React, { useRef } from 'react';
 import { View, Text, Animated, PanResponder, StyleSheet } from 'react-native';
 import { IconTrash } from '@/components/Icons';

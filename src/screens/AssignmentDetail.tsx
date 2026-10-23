@@ -274,7 +274,7 @@ export default function AssignmentDetail() {
       <BottomSheet visible={warningOpen} onClose={() => setWarningOpen(false)}>
         <View style={styles.warningWrap}>
           <Image
-            source={require('@/../assets/warning.png')}
+            source={require('@/../assets/images/warning.png')}
             style={styles.warningImage}
             resizeMode="contain"
           />

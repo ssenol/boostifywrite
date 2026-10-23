@@ -38,7 +38,7 @@ export default function App() {
   if (!loaded) {
     return (
       <Image
-        source={require('./assets/splash.png')}
+        source={require('./assets/images/splash.png')}
         resizeMode="cover"
         style={[StyleSheet.absoluteFill, { backgroundColor: colors.brandBlue }]}
       />

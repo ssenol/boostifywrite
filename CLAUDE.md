@@ -89,7 +89,16 @@ import { colors, spacing, type, radii, shadow } from '@/theme';
 - **Auth:** Login ekranı sadece `nav.navigate('Main')` yapar — gerçek auth yok. **AsyncStorage + auth context kurun.**
 - **Compose editor:** Basit `TextInput` (multiline). **Production için rich text editor gerekir** (önerilen: `@10play/tentap-editor` veya `react-native-pell-rich-editor`).
 - **Evaluating:** Setting timeout ile sahte progress — backend evaluation endpoint'ine bağlanacak.
-- **Asset eksikleri:** `assets/icon.png` (1024×1024) ve `assets/splash.png` (1242×2436) yok. `app.json` referans verse de dosyalar oluşturulmalı. Geçici olarak yer tutucu PNG koyun.
+
+## Build varyantları ve ikonlar
+
+BS (boostifyspeak) ve BE (boostifyexam) ile **aynı kurulum** — tarif: `~/.claude/notes/expo-dev-varyant.md`.
+
+- `app.config.js` tek config dosyası (`app.json` yok, eklemeyin). `APP_VARIANT=development` olunca ad "BoostifyWrite DEV", bundle id/package `com.uesturkey.boostifywrite.dev`, scheme `boostifywrite-dev`, ikonlar `*-dev.png`. `extra.appVariant` çalışma anında `src/config/env.ts` → `IS_DEV_MODE` ile okunur.
+- **Yerel build her zaman dev varyantıdır:** `npm start`, `npm run ios` (iPhone 16), `npm run android`, `npm run prebuild:dev`. Çıplak `npx expo prebuild` çalıştırmayın — prod varyantını üretir, store uygulamasının üzerine kurulur. Store/TestFlight build'leri yalnızca EAS `production` profiliyle.
+- iOS projesi `ios/BoostifyWriteDEV.xcworkspace`. Her `prebuild:dev -- --clean` sonrası Xcode'da Signing Team seçilmeli ve `xattr -w com.dropbox.ignored 1 ios android` tekrarlanmalı.
+- Geliştirici araçları (Reset All Data, kaydırarak silme) `IS_DEV_MODE &&` ile sarılır, `__DEV__` doğrudan kullanılmaz.
+- Görseller `assets/images/` altında: `icon.png` / `icon-dark.png` (iOS açık/koyu), `adaptive-icon.png` (Android), `splash.png` (tam ekran, her iki varyantta aynı). `icon.png` uygulama içinde `LogoMark` olarak da kullanılıyor. Dev ikonları elle tasarlanmaz: normal ikon değişince `npm run icons:dev` (`dev-badge.png` bindirilir) → `npm run prebuild:dev`. Figma çıktıları `_calismalar/`'a konur (gitignore'da).
 
 ## Tests / lint / type-check
 

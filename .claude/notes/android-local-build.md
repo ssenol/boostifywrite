@@ -52,12 +52,11 @@ SDK hiç yoksa: Android Studio'yu kurup SDK Manager'dan yukarıdakileri seçmek 
 ## 2. Build ve kurulum
 
 ```sh
-# Native projeyi üret (package.json veya app.json değiştiyse, ya da android/ yoksa)
-CI=1 npx expo prebuild --clean --platform android
+# Native projeyi dev varyantıyla üret (package.json veya app.config.js değiştiyse, ya da android/ yoksa)
+# ⚠️ Çıplak `npx expo prebuild` KULLANMA: prod varyantını üretir, store uygulamasının üzerine kurulur.
+CI=1 npm run prebuild:dev -- --clean --platform android
 # ⚠️ --clean klasörü silip yeniden oluşturur, Dropbox ignore işareti gider. Her seferinde tekrarla:
 xattr -w com.dropbox.ignored 1 android ios
-# ⚠️ prebuild package.json'daki "ios"/"android" script'lerini "expo run:*" yapar.
-#    Commit'lemeden önce sadece o iki satırı geri al (git checkout package.json KULLANMA).
 
 # Debug APK derle (ilk seferde ~10 dk, sonra hızlı)
 cd android && ./gradlew assembleDebug && cd ..
@@ -68,17 +67,16 @@ npx expo start --clear
 # Cihaza kur ve Metro'ya USB üzerinden bağla
 adb install android/app/build/outputs/apk/debug/app-debug.apk
 adb reverse tcp:8081 tcp:8081
-adb shell monkey -p com.uesturkey.boostifywrite -c android.intent.category.LAUNCHER 1
+adb shell monkey -p com.uesturkey.boostifywrite.dev -c android.intent.category.LAUNCHER 1
 ```
 
-`npx expo run:android` de aynı işi tek komutla yapar. Yukarıdaki adımlar hangi adımda hata
+`npm run android` (dev varyantıyla `expo run:android`) aynı işi tek komutla yapar. Yukarıdaki adımlar hangi adımda hata
 olduğunu görmek için ayrı tutuldu.
 
 ## 3. Bilinen durumlar
 
-- **Store sürümü kuruluysa önce kaldır.** Debug APK farklı anahtarla imzalı, Android üzerine kurmayı
-  reddeder (iOS'taki gibi ekip seçerek çözülmez). Kaldırınca cihazdaki oturum/AsyncStorage gider.
-  Test sonrası Play Store'dan tekrar yükle.
+- **Store sürümü yerinde kalır.** Dev build ayrı paket adıyla (`com.uesturkey.boostifywrite.dev`,
+  "BoostifyWrite DEV") yan yana kurulur; store sürümünü kaldırmak gerekmez.
 - **APK ~229 MB**: debug build tüm ABI'leri ve sembolleri içerir. Store AAB'si çok daha küçük.
 - **Log'lar:** `adb logcat -d -t 400 | grep -iE "ReactNativeJS|AndroidRuntime|FATAL"`
 - **"Refreshing..." banner'ı sürekli çıkıyorsa:** `metro.config.js` kökteki `ios/` ve `android/`'i
@@ -91,6 +89,6 @@ olduğunu görmek için ayrı tutuldu.
 ## iOS için kısa not (aynı makine)
 
 - Xcode 27'de Simulator.app yok (yerine Device Hub). `expo run:ios` "Can't determine id of Simulator
-  app" hatası verir. Çözüm: `npx expo start` + `ios/BoostifyWrite.xcworkspace`'i Xcode'da aç, cihazı seç, Run.
-- Signing Team: **9L497LXNLQ** (store sürümüyle aynı ekip, üzerine kurulur ve veri korunur).
+  app" hatası verir. Çözüm: `npx expo start` + `ios/BoostifyWriteDEV.xcworkspace`'i Xcode'da aç, cihazı seç, Run.
+- Signing Team: **9L497LXNLQ** (otomatik imzalama `.dev` App ID'sini kaydeder; store sürümünün yanına kurulur).
   Prebuild bu ayarı sıfırlar, her prebuild sonrası tekrar seç.

@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "start": "expo start",
-    "ios": "expo start --ios",
-    "android": "expo start --android",
+    "start": "APP_VARIANT=development expo start",
+    "ios": "APP_VARIANT=development expo run:ios --device \"iPhone 16\"",
+    "android": "APP_VARIANT=development expo run:android",
+    "prebuild:dev": "APP_VARIANT=development expo prebuild",
+    "icons:dev": "node scripts/generate-dev-icons.js",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit"
   },
@@ -20,6 +22,8 @@
     "expo": "~57.0.25",
     "expo-asset": "~57.0.18",
     "expo-build-properties": "~57.0.22",
+    "expo-constants": "~57.0.22",
+    "expo-dev-client": "~57.0.20",
     "expo-file-system": "~57.0.7",
     "expo-font": "~57.0.4",
     "expo-image-picker": "~57.0.20",
@@ -38,6 +42,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.10",
+    "pngjs": "^3.4.0",
     "react-native-svg-transformer": "^1.5.0",
     "typescript": "~6.0.3"
   },
