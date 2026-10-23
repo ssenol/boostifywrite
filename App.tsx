@@ -18,9 +18,14 @@ import {
 
 import RootNavigator from '@/navigation';
 import { AuthProvider } from '@/context/AuthContext';
+import DeepLinkLoginHandler from '@/components/DeepLinkLoginHandler';
+import { startDeepLinkListener } from '@/utils/deepLinkToken';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// SSO linki (boostifywrite://login?token=...) font yüklemesini beklemeden yakalansın
+startDeepLinkListener();
 
 export default function App() {
   const [loaded] = useFonts({
@@ -49,6 +54,7 @@ export default function App() {
       <StatusBar style="dark"/>
       <AuthProvider>
         <RootNavigator/>
+        <DeepLinkLoginHandler/>
       </AuthProvider>
     </SafeAreaProvider>
   );

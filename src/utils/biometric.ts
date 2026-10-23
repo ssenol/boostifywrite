@@ -110,6 +110,18 @@ export async function clearStoredCredentials(): Promise<void> {
 }
 
 /**
+ * SSO linkiyle giriş yapan öğrenci, kayıtlı biyometrik bilgilerin sahibi değilse kaydı siler ve
+ * biyometriği kapatır: yoksa çıkıştan sonra Face ID önceki öğrencinin hesabını açardı.
+ * Aynı öğrenciyse (ya da kayıt yoksa) dokunulmaz.
+ */
+export async function clearCredentialsIfOtherUser(username: string | undefined): Promise<void> {
+  const stored = await getStoredCredentials();
+  if (!stored) return;
+  if (username && stored.username.trim().toLowerCase() === username.trim().toLowerCase()) return;
+  await clearStoredCredentials();
+}
+
+/**
  * Biyometrik giriş için uygun mesajı döndürür
  */
 export function getBiometricPromptMessage(types: BiometricType[]): string {

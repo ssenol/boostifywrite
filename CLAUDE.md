@@ -97,8 +97,20 @@ BS (boostifyspeak) ve BE (boostifyexam) ile **aynı kurulum** — tarif: `~/.cla
 - `app.config.js` tek config dosyası (`app.json` yok, eklemeyin). `APP_VARIANT=development` olunca ad "BoostifyWrite DEV", bundle id/package `com.uesturkey.boostifywrite.dev`, scheme `boostifywrite-dev`, ikonlar `*-dev.png`. `extra.appVariant` çalışma anında `src/config/env.ts` → `IS_DEV_MODE` ile okunur.
 - **Yerel build her zaman dev varyantıdır:** `npm start`, `npm run ios` (iPhone 16), `npm run android`, `npm run prebuild:dev`. Çıplak `npx expo prebuild` çalıştırmayın — prod varyantını üretir, store uygulamasının üzerine kurulur. Store/TestFlight build'leri yalnızca EAS `production` profiliyle.
 - iOS projesi `ios/BoostifyWriteDEV.xcworkspace`. Her `prebuild:dev -- --clean` sonrası Xcode'da Signing Team seçilmeli ve `xattr -w com.dropbox.ignored 1 ios android` tekrarlanmalı.
+- **Xcode'un "Update to recommended settings" önerisini kabul etmeyin.** Pods target'larını `$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)` (Xcode 27'de 17.0) yapar, build `compiling for iOS 16.4, but module 'Expo' has a minimum deployment target of iOS 17.0` ile düşer. Kabul edildiyse `cd ios && pod install` geri alır.
+- Swift sürüm hatası (`this SDK is not supported by the compiler`, `cannot find type '__ObjC::expo'`): Xcode'u kapat → `bash node_modules/expo-modules-jsi/apple/scripts/clear-caches.sh` → `rm -rf ~/Library/Developer/Xcode/DerivedData/BoostifyWriteDEV-*` → `cd ios && pod install`.
 - Geliştirici araçları (Reset All Data, kaydırarak silme) `IS_DEV_MODE &&` ile sarılır, `__DEV__` doğrudan kullanılmaz.
 - Görseller `assets/images/` altında: `icon.png` / `icon-dark.png` (iOS açık/koyu), `adaptive-icon.png` (Android), `splash.png` (tam ekran, her iki varyantta aynı). `icon.png` uygulama içinde `LogoMark` olarak da kullanılıyor. Dev ikonları elle tasarlanmaz: normal ikon değişince `npm run icons:dev` (`dev-badge.png` bindirilir) → `npm run prebuild:dev`. Figma çıktıları `_calismalar/`'a konur (gitignore'da).
+
+## Deep link ile SSO girişi
+
+BS ile aynı akış. Okul platformundan gelen öğrenci service.ueslms üzerinden `boostifywrite://login?token=<şifreli SSO token>` ile app'e düşer (dev sürümünde scheme `boostifywrite-dev`).
+- `src/utils/deepLinkToken.ts` → `startDeepLinkListener()` (App.tsx'te modül seviyesinde) soğuk açılış (`Linking.getInitialURL`) ve açıkken gelen linkleri dinler, `token` taşıyanları kuyruğa koyar. BS'te bu işi expo-router'ın `app/+native-intent.tsx`'i yapar; kuyruk dosyası ikisinde aynı.
+- `src/components/DeepLinkLoginHandler.tsx` (AuthProvider içinde) kayıtlı oturum yüklenince token'ı alır, `useAuth().loginWithSsoToken()` → `POST /auth/sso-mobile` `{ token }` (yanıt `/auth/login` ile aynı, öğrenci kontrolü `NotStudentError` dahil).
+- Açık oturum varsa yalnızca giriş başarılı olunca yeni öğrenciye geçilir; hata olursa mevcut oturum kalır. Giriş istekleri (`skipRefresh`) kayıtlı access token'ı göndermez, 401'de yenileme yapmaz.
+- Öğrenci değişince `RootStack.Navigator` `key={user.userId}` ile yeniden kurulur. AuthContext'teki açılış sessiz yenilemesi, bu arada oturum değiştiyse (`sessionRef`) sonucunu yazmaz.
+- SSO ile giriş başarılıysa ve kayıtlı Face ID bilgileri başka öğrenciye aitse `Biometric.clearCredentialsIfOtherUser()` kaydı siler, biyometriği kapatır (aynı öğrenciyse dokunmaz). BS'te aynı kural `BiometricAuthService.clearCredentialsIfOtherUser()`.
+- Test: cihazda Safari/Notlar'dan `boostifywrite-dev://login?token=<token>`. Geçersiz token → "Automatic sign-in failed" uyarısı, oturum değişmez.
 
 ## Tests / lint / type-check
 

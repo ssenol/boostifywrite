@@ -9,7 +9,7 @@ type RequestOptions = {
   body?: unknown;
   token?: string;           // exercise token gibi özel token geçmek için
   isFormData?: boolean;     // multipart/form-data (OCR) için
-  skipRefresh?: boolean;    // auth endpoint'leri için token yenilemeyi devre dışı bırak
+  skipRefresh?: boolean;    // giriş endpoint'leri: kayıtlı access token eklenmez, 401'de yenileme yapılmaz
 };
 
 async function refreshAndRetry<T>(path: string, options: RequestOptions): Promise<T> {
@@ -60,7 +60,8 @@ export function imageFormPart(uri: string, fallbackName: string): Blob {
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, isFormData = false } = options;
 
-  const token = options.token ?? (await getAccessToken());
+  // Açık bir oturum varken (SSO ile kullanıcı değişimi) giriş isteğine mevcut access token eklenmesin
+  const token = options.token ?? (options.skipRefresh ? null : await getAccessToken());
 
   const headers: Record<string, string> = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;

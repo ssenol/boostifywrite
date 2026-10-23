@@ -10,6 +10,16 @@ export async function login(username: string, password: string): Promise<LoginRe
   });
 }
 
+// Web'den (service.ueslms) deep link ile gelen şifreli SSO token'ını oturuma çevirir.
+// Yanıt /auth/login ile aynı şekildedir.
+export async function loginWithSsoToken(ssoToken: string): Promise<LoginResponse> {
+  return request<LoginResponse>('/auth/sso-mobile', {
+    method: 'POST',
+    body: { token: ssoToken },
+    skipRefresh: true,
+  });
+}
+
 export async function refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
   return request<RefreshTokenResponse>('/auth/refresh-mobile-app-access-token', {
     method: 'POST',

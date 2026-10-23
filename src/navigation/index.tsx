@@ -171,7 +171,8 @@ export default function RootNavigator() {
         heavy:   { fontFamily: 'Manrope_800ExtraBold',  fontWeight: '800' },
       },
     }}>
-      <RootStack.Navigator screenOptions={noHeader}>
+      {/* key: SSO linkiyle başka öğrenciye geçilince sekmeler sıfırdan kurulsun, önceki öğrencinin verisi kalmasın */}
+      <RootStack.Navigator key={user?.userId ?? 'guest'} screenOptions={noHeader}>
         {user ? (
           <RootStack.Screen name="Main" component={MainTabs}/>
         ) : (
